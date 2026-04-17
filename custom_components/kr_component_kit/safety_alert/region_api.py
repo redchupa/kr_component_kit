@@ -9,15 +9,13 @@ import curl_cffi
 from ..const import LOGGER
 
 _TIMEOUT = 15
+_BASE_URL = "https://www.safekorea.go.kr/safekorea-kor/ctim/cmsg"
 _HEADERS = {
-    "Content-Type": "application/json; charset=UTF-8",
-    "Accept": "application/json",
+    "Accept": "application/json, text/javascript, */*; q=0.01",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "X-Requested-With": "XMLHttpRequest",
-    "Origin": "https://www.safekorea.go.kr",
-    "Referer": "https://www.safekorea.go.kr/idsiSFK/neo/sfk/cs/sfc/dis/disasterMsgList.jsp",
+    "Referer": "https://www.safekorea.go.kr/safekorea-kor/ctim/cmsg/calamitySms.do",
 }
-_BASE_URL = "https://www.safekorea.go.kr/idsiSFK/sfk/cs/sua/web"
 
 # 전국 17개 시도 — 행정구역이므로 하드코딩
 _SIDO_LIST = [
@@ -53,12 +51,15 @@ class SafetyAlertRegionApiClient:
 
     async def async_get_sgg_list(self, sido_code: str) -> List[Dict[str, str]]:
         """Get list of sgg (시군구) regions for a given sido."""
-        url = f"{_BASE_URL}/Get_CBS_Sgg_List.do"
-        payload = {"sgg_searchInfo": {"BDONG_CD": "", "bdong_cd": sido_code}}
+        url = f"{_BASE_URL}/changeSidoList.do"
         try:
             async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
-                response = await session.post(
-                    url, json=payload, headers=_HEADERS, verify=False, timeout=_TIMEOUT
+                response = await session.get(
+                    url,
+                    params={"sbLawArea1": sido_code},
+                    headers=_HEADERS,
+                    verify=False,
+                    timeout=_TIMEOUT,
                 )
                 if response.status_code != 200:
                     LOGGER.warning("Sgg list API failed with status: %s", response.status_code)
@@ -69,10 +70,10 @@ class SafetyAlertRegionApiClient:
                     LOGGER.warning("Sgg list API returned non-JSON response")
                     return []
                 data = response.json()
-                sgg_list = data.get("cbs_sgg_list", [])
                 result = [
-                    {"code": s.get("BDONG_CD", ""), "name": s.get("CBS_AREA_NM", "")}
-                    for s in sgg_list
+                    {"code": s.get("bdongCd", ""), "name": s.get("cbsAreaNm", "")}
+                    for s in data
+                    if s.get("cbsAreaNm") != "화성시"
                 ]
                 result.sort(key=lambda x: x["name"])
                 return result
@@ -82,18 +83,15 @@ class SafetyAlertRegionApiClient:
 
     async def async_get_emd_list(self, sido_code: str, sgg_code: str) -> List[Dict[str, str]]:
         """Get list of emd (읍면동) regions for a given sido and sgg."""
-        url = f"{_BASE_URL}/Get_CBS_Emd_List.do"
-        payload = {
-            "emd_searchInfo": {
-                "BDONG_CD": "",
-                "area1_bdong_cd": sido_code,
-                "area2_bdong_cd": sgg_code,
-            }
-        }
+        url = f"{_BASE_URL}/changeSggList.do"
         try:
             async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
-                response = await session.post(
-                    url, json=payload, headers=_HEADERS, verify=False, timeout=_TIMEOUT
+                response = await session.get(
+                    url,
+                    params={"sbLawArea1": sido_code, "sbLawArea2": sgg_code},
+                    headers=_HEADERS,
+                    verify=False,
+                    timeout=_TIMEOUT,
                 )
                 if response.status_code != 200:
                     LOGGER.warning("Emd list API failed with status: %s", response.status_code)
@@ -104,10 +102,9 @@ class SafetyAlertRegionApiClient:
                     LOGGER.warning("Emd list API returned non-JSON response")
                     return []
                 data = response.json()
-                emd_list = data.get("cbs_emd_list", [])
                 result = [
-                    {"code": e.get("BDONG_CD", ""), "name": e.get("CBS_AREA_NM", "")}
-                    for e in emd_list
+                    {"code": e.get("bdongCd", ""), "name": e.get("cbsAreaNm", "")}
+                    for e in data
                 ]
                 result.sort(key=lambda x: x["name"])
                 return result
