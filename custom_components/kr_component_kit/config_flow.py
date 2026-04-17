@@ -153,9 +153,10 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         error_info: Dict[str, str] = {}
 
         if user_input is not None:
-            # Store the selected sido and move to sgg selection
-            self._safety_alert_data["sido_code"] = user_input["sido_code"]
-            self._safety_alert_data["sido_name"] = user_input["sido_name"]
+            sido_code = user_input["sido_code"]
+            sido_name = self._safety_alert_data.get("sido_options", {}).get(sido_code, sido_code)
+            self._safety_alert_data["sido_code"] = sido_code
+            self._safety_alert_data["sido_name"] = sido_name
             return await self.async_step_safety_alert_sgg()
 
         # Get sido list
@@ -168,10 +169,10 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "no_regions_available"
                     error_info["error"] = "No sido data returned from API"
                 else:
-                    # Create options for dropdown
                     sido_options = {
                         region["code"]: region["name"] for region in sido_list
                     }
+                    self._safety_alert_data["sido_options"] = sido_options
 
                     return self.async_show_form(
                         step_id="safety_alert",
@@ -180,7 +181,6 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 vol.Required("sido_code", default="1100000000"): vol.In(
                                     sido_options
                                 ),
-                                vol.Required("sido_name", default="서울특별시"): str,
                             }
                         ),
                         errors=errors,
@@ -196,13 +196,11 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors["base"] = "unknown"
             error_info["error"] = str(e)
 
-        # Fallback to simple form if API fails
         return self.async_show_form(
             step_id="safety_alert",
             data_schema=vol.Schema(
                 {
                     vol.Required("sido_code", default="1100000000"): str,
-                    vol.Required("sido_name", default="서울특별시"): str,
                 }
             ),
             errors=errors,
@@ -217,11 +215,11 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         error_info: Dict[str, str] = {}
 
         if user_input is not None:
-            # Store the selected sgg and move to optional emd selection
-            self._safety_alert_data["sgg_code"] = user_input["sgg_code"]
-            self._safety_alert_data["sgg_name"] = user_input["sgg_name"]
+            sgg_code = user_input["sgg_code"]
+            sgg_name = self._safety_alert_data.get("sgg_options", {}).get(sgg_code, sgg_code)
+            self._safety_alert_data["sgg_code"] = sgg_code
+            self._safety_alert_data["sgg_name"] = sgg_name
 
-            # User can choose to add emd (읍면동) or finish here
             if user_input.get("add_emd", False):
                 return await self.async_step_safety_alert_emd()
             else:
@@ -241,17 +239,16 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         f"No sgg data returned for sido code {self._safety_alert_data['sido_code']}"
                     )
                 else:
-                    # Create options for dropdown
                     sgg_options = {
                         region["code"]: region["name"] for region in sgg_list
                     }
+                    self._safety_alert_data["sgg_options"] = sgg_options
 
                     return self.async_show_form(
                         step_id="safety_alert_sgg",
                         data_schema=vol.Schema(
                             {
                                 vol.Required("sgg_code"): vol.In(sgg_options),
-                                vol.Required("sgg_name"): str,
                                 vol.Optional("add_emd", default=False): bool,
                             }
                         ),
@@ -273,7 +270,6 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required("sgg_code"): str,
-                    vol.Required("sgg_name"): str,
                     vol.Optional("add_emd", default=False): bool,
                 }
             ),
@@ -289,9 +285,10 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         error_info: Dict[str, str] = {}
 
         if user_input is not None:
-            # Store the selected emd and create entry
-            self._safety_alert_data["emd_code"] = user_input["emd_code"]
-            self._safety_alert_data["emd_name"] = user_input["emd_name"]
+            emd_code = user_input["emd_code"]
+            emd_name = self._safety_alert_data.get("emd_options", {}).get(emd_code, emd_code)
+            self._safety_alert_data["emd_code"] = emd_code
+            self._safety_alert_data["emd_name"] = emd_name
             return await self._create_safety_alert_entry()
 
         # Get emd list for the selected sido and sgg
@@ -309,17 +306,16 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         f"No emd data returned for sido {self._safety_alert_data['sido_code']} and sgg {self._safety_alert_data['sgg_code']}"
                     )
                 else:
-                    # Create options for dropdown
                     emd_options = {
                         region["code"]: region["name"] for region in emd_list
                     }
+                    self._safety_alert_data["emd_options"] = emd_options
 
                     return self.async_show_form(
                         step_id="safety_alert_emd",
                         data_schema=vol.Schema(
                             {
                                 vol.Required("emd_code"): vol.In(emd_options),
-                                vol.Required("emd_name"): str,
                             }
                         ),
                         errors=errors,
@@ -340,7 +336,6 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required("emd_code"): str,
-                    vol.Required("emd_name"): str,
                 }
             ),
             errors=errors,
