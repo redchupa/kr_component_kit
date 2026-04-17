@@ -105,34 +105,24 @@ class SafetyAlertSensor(CoordinatorEntity, BinarySensorEntity):
         if not self.coordinator.data:
             return None
 
-        # Get the latest alert data
-        latest_alert = self.coordinator.data.get("parsed_data", {}).get("data", [{}])[0]
-        if not latest_alert:
-            return None
+        raw_alerts = self.coordinator.data.get("parsed_data", {}).get("data", [])
+        if not raw_alerts:
+            return {"latest": None, "alerts": []}
 
-        alerts = []
-        for alert in self.coordinator.data.get("parsed_data", {}).get("data", []):
-            alerts.append(
-                {
-                    "emergency_step": alert.get("EMRGNCY_STEP_NM"),
-                    "disaster_type": alert.get("DSSTR_SE_NM"),
-                    "message": alert.get("MSG_CN"),
-                    "reception_area": alert.get("RCV_AREA_NM"),
-                    "registration_date": parse_date_value(alert.get("REGIST_DT")),
-                }
-            )
-
-        # Sort alerts by registration date in descending order
+        alerts = [
+            {
+                "emergency_step": a.get("EMRGNCY_STEP_NM"),
+                "disaster_type": a.get("DSSTR_SE_NM"),
+                "message": a.get("MSG_CN"),
+                "reception_area": a.get("RCV_AREA_NM"),
+                "registration_date": parse_date_value(a.get("REGIST_DT")),
+            }
+            for a in raw_alerts
+        ]
         alerts.sort(key=lambda x: x["registration_date"], reverse=True)
 
         return {
-            "latest": {
-                "emergency_step": latest_alert.get("EMRGNCY_STEP_NM"),
-                "disaster_type": latest_alert.get("DSSTR_SE_NM"),
-                "message": latest_alert.get("MSG_CN"),
-                "reception_area": latest_alert.get("RCV_AREA_NM"),
-                "registration_date": parse_date_value(latest_alert.get("REGIST_DT")),
-            },
+            "latest": alerts[0],
             "alerts": alerts,
         }
 
@@ -142,17 +132,14 @@ class SafetyAlertSensor(CoordinatorEntity, BinarySensorEntity):
         if not self.coordinator.data:
             return None
 
-        # Get the latest alert data
-        latest_alert = self.coordinator.data.get("parsed_data", {}).get("data", [{}])
-        if not latest_alert:
-            return None
+        raw_alerts = self.coordinator.data.get("parsed_data", {}).get("data", [])
+        if not raw_alerts:
+            return False
 
-        # Check if there is an emergency step name
-        # and regist date is greater or equal to the current date
-
+        latest = raw_alerts[0]
         return bool(
-            latest_alert[0].get("EMRGNCY_STEP_NM")
-            and parse_date_value(latest_alert[0].get("REGIST_DT"))
+            latest.get("EMRGNCY_STEP_NM")
+            and parse_date_value(latest.get("REGIST_DT"))
             >= datetime.datetime.combine(
                 datetime.date.today(),
                 datetime.time(0, 0, 0),
