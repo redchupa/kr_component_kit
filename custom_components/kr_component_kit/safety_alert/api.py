@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
@@ -13,11 +14,9 @@ from ..const import LOGGER, TZ_ASIA_SEOUL
 
 _BASE_URL = "https://www.safekorea.go.kr/safekorea-kor/ctim/cmsg/calamitySms.do"
 _HEADERS = {
-    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Referer": "https://www.safekorea.go.kr/safekorea-kor/ctim/cmsg/calamitySms.do",
-    "Origin": "https://www.safekorea.go.kr",
 }
 
 
@@ -37,27 +36,23 @@ class SafetyAlertApiClient:
         end_date = datetime.now(TZ_ASIA_SEOUL)
         start_date = end_date - timedelta(days=7)
 
-        form_data = {
-            "bbsSn": "",
+        params = {
+            "menuSn": "34",
             "currentPage": "1",
-            "firstYn": "",
-            "cOcrcType": "",
-            "dsstrSeId": "",
+            "readYn": "Y",
+            "firstYn": "N",
             "sbLawArea1": area_code,
             "sbLawArea2": area_code2 or "",
             "sbLawArea3": area_code3 or "",
-            "keyword": "",
-            "searchType": "",
             "startDate": start_date.strftime("%Y-%m-%d"),
             "endDate": end_date.strftime("%Y-%m-%d"),
-            "readYn": "Y",
         }
 
         try:
             async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
-                response = await session.post(
+                response = await session.get(
                     _BASE_URL,
-                    data=form_data,
+                    params=params,
                     headers=_HEADERS,
                     verify=False,
                     timeout=15,
@@ -68,7 +63,6 @@ class SafetyAlertApiClient:
 
                 html = response.text
                 LOGGER.debug("Safety Alert HTML length: %d", len(html))
-
                 return self._parse_html(html)
 
         except SafetyAlertConnectionError:
@@ -82,48 +76,57 @@ class SafetyAlertApiClient:
         soup = BeautifulSoup(html, "html.parser")
         alerts: List[Dict[str, Any]] = []
 
-        # 웹용 테이블 파싱
-        table = soup.select_one("div.board-listarea table tbody")
-        if table:
-            rows = table.find_all("tr")
-            for row in rows:
-                cells = row.find_all("td")
-                if len(cells) < 2:
-                    continue
-                # 데이터 없음 행 건너뜀
-                if cells[0].get("colspan"):
-                    continue
+        # 전체 건수
+        count_span = soup.select_one("div.board-count span")
+        total_count = int(count_span.get_text(strip=True)) if count_span else 0
 
-                disaster_type = cells[0].get_text(strip=True)
-                msg_cell = cells[1]
+        # 웹용 테이블 파싱 (board-listarea)
+        rows = soup.select("div.board-listarea table tbody tr")
+        for row in rows:
+            cells = row.find_all("td")
+            if len(cells) < 2:
+                continue
+            if cells[0].get("colspan"):
+                continue
 
-                # 메시지, 날짜, 지역 추출 시도
-                msg_content = msg_cell.get_text(separator="\n", strip=True)
-                lines = [l.strip() for l in msg_content.split("\n") if l.strip()]
+            disaster_type = cells[0].get_text(strip=True)
+            msg_cell = cells[1]
 
-                alert = {
-                    "DSSTR_SE_NM": disaster_type,
-                    "EMRGNCY_STEP_NM": "",
-                    "MSG_CN": lines[0] if lines else "",
-                    "RCV_AREA_NM": lines[-1] if len(lines) > 1 else "",
-                    "REGIST_DT": "",
-                }
+            # 메시지 내용 (a 태그)
+            msg_link = msg_cell.find("a")
+            msg_content = msg_link.get_text(strip=True) if msg_link else ""
 
-                # onclick에서 ID 추출 (상세조회용)
-                onclick = row.get("onclick", "")
-                if "onSubmit" in onclick:
-                    import re
-                    m = re.search(r"onSubmit\('([^']+)'\)", onclick)
-                    if m:
-                        alert["SMS_TRSM_SN"] = m.group(1)
+            # 발송일시 / 긴급단계 / 송출지역 (p 태그)
+            info_p = msg_cell.find("p")
+            info_text = info_p.get_text(" ", strip=True) if info_p else ""
 
-                alerts.append(alert)
-                LOGGER.debug("Parsed alert: %s", alert)
+            regist_dt = ""
+            emrgncy_step = ""
+            rcv_area = ""
 
-        if not alerts:
-            LOGGER.debug("No alerts found in HTML. Raw snippet: %s", html[2000:3000])
+            dt_match = re.search(r"발송일시\s*:\s*([\d/\s:]+)", info_text)
+            if dt_match:
+                regist_dt = dt_match.group(1).strip()
+
+            step_match = re.search(r"긴급단계\s*:\s*([^\ㆍ]+)", info_text)
+            if step_match:
+                emrgncy_step = step_match.group(1).strip()
+
+            area_match = re.search(r"송출지역\s*:\s*(.+?)$", info_text)
+            if area_match:
+                rcv_area = area_match.group(1).strip()
+
+            alerts.append({
+                "DSSTR_SE_NM": disaster_type,
+                "EMRGNCY_STEP_NM": emrgncy_step,
+                "MSG_CN": msg_content,
+                "RCV_AREA_NM": rcv_area,
+                "REGIST_DT": regist_dt,
+            })
+
+        LOGGER.debug("Parsed %d alerts (total: %d)", len(alerts), total_count)
 
         return {
             "disasterSmsList": alerts,
-            "rtnResult": {"totCnt": len(alerts)},
+            "rtnResult": {"totCnt": total_count},
         }
