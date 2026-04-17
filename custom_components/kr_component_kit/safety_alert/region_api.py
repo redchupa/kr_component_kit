@@ -29,11 +29,12 @@ class SafetyAlertRegionApiClient:
 
     async def async_get_sido_list(self) -> List[Dict[str, str]]:
         """Get list of sido (시도) regions."""
+        import json as json_mod
         url = f"{self._base_url}/Get_CBS_Sido_List.do"
         try:
             async with self._session.post(
                 url,
-                json={},
+                json={"sido_searchInfo": {}},
                 headers=_BASE_HEADERS,
                 ssl=False,
                 timeout=_REQUEST_TIMEOUT,
@@ -41,7 +42,16 @@ class SafetyAlertRegionApiClient:
                 if response.status != 200:
                     LOGGER.error("Sido list API request failed with status: %s", response.status)
                     return []
-                data = await response.json(content_type=None)
+                text = await response.text()
+                LOGGER.debug("Sido list raw response: %s", text[:500])
+                if not text.strip():
+                    LOGGER.error("Sido list API returned empty response")
+                    return []
+                try:
+                    data = json_mod.loads(text)
+                except json_mod.JSONDecodeError as e:
+                    LOGGER.error("Sido list JSON parse failed: %s | body: %s", e, text[:200])
+                    raise
                 sido_list = data.get("cbs_sido_list", [])
                 result = [
                     {
