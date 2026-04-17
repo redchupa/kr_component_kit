@@ -211,11 +211,12 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: Optional[Dict[str, Any]] = None
     ):
         """Handle Safety Alert sgg (시군구) selection."""
+        errors: Dict[str, str] = {}
+        error_info: Dict[str, str] = {}
+
         if user_input is not None:
             sgg_code = user_input.get("sgg_code") or user_input.get("sgg_name", "")
-            sgg_name = (
-                self._safety_alert_data.get("sgg_options", {}).get(sgg_code, sgg_code)
-            )
+            sgg_name = self._safety_alert_data.get("sgg_options", {}).get(sgg_code, sgg_code)
             self._safety_alert_data["sgg_code"] = sgg_code
             self._safety_alert_data["sgg_name"] = sgg_name
             if user_input.get("add_emd", False):
@@ -243,7 +244,8 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 description_placeholders={"sido_name": sido_name},
             )
 
-        # No hardcoded data for this sido — fall back to manual text input
+        # API returned no data — fall back to manual text input
+        LOGGER.warning("No sgg data returned for sido %s, using text input", sido_code)
         return self.async_show_form(
             step_id="safety_alert_sgg",
             data_schema=vol.Schema(
@@ -252,18 +254,46 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional("add_emd", default=False): bool,
                 }
             ),
+            errors=errors,
             description_placeholders={"sido_name": sido_name},
         )
 
     async def async_step_safety_alert_emd(
         self, user_input: Optional[Dict[str, Any]] = None
     ):
-        """Handle Safety Alert emd (읍면동) manual input."""
+        """Handle Safety Alert emd (읍면동) selection."""
+        errors: Dict[str, str] = {}
+        error_info: Dict[str, str] = {}
+
         if user_input is not None:
-            self._safety_alert_data["emd_name"] = user_input["emd_name"]
+            emd_code = user_input.get("emd_code") or user_input.get("emd_name", "")
+            emd_name = self._safety_alert_data.get("emd_options", {}).get(emd_code, emd_code)
+            self._safety_alert_data["emd_code"] = emd_code
+            self._safety_alert_data["emd_name"] = emd_name
             return await self._create_safety_alert_entry()
 
+        sido_code = self._safety_alert_data.get("sido_code", "")
+        sgg_code = self._safety_alert_data.get("sgg_code", "")
         sgg_name = self._safety_alert_data.get("sgg_name", "")
+
+        region_client = SafetyAlertRegionApiClient()
+        emd_list = await region_client.async_get_emd_list(sido_code, sgg_code)
+
+        if emd_list:
+            emd_options = {r["code"]: r["name"] for r in emd_list}
+            self._safety_alert_data["emd_options"] = emd_options
+            return self.async_show_form(
+                step_id="safety_alert_emd",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required("emd_code"): vol.In(emd_options),
+                    }
+                ),
+                description_placeholders={"sgg_name": sgg_name},
+            )
+
+        # API returned no data — fall back to manual text input
+        LOGGER.warning("No emd data returned for sgg %s, using text input", sgg_code)
         return self.async_show_form(
             step_id="safety_alert_emd",
             data_schema=vol.Schema(
@@ -271,6 +301,7 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required("emd_name"): str,
                 }
             ),
+            errors=errors,
             description_placeholders={"sgg_name": sgg_name},
         )
 
@@ -280,14 +311,16 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             sido_code = self._safety_alert_data["sido_code"]
             sgg_code = self._safety_alert_data.get("sgg_code", "")
             sgg_name = self._safety_alert_data.get("sgg_name", "")
+            emd_code = self._safety_alert_data.get("emd_code", "")
             emd_name = self._safety_alert_data.get("emd_name", "")
 
-            # Use sgg_code for API filtering only if it looks like a numeric code
-            api_area_code2 = sgg_code if sgg_code.isdigit() else None
+            # Use numeric codes for API filtering; text fallbacks are display-only
+            api_sgg = sgg_code if sgg_code.isdigit() else None
+            api_emd = emd_code if emd_code.isdigit() else None
 
             async with aiohttp.ClientSession() as session:
                 client = SafetyAlertApiClient(session)
-                await client.async_get_safety_alerts(sido_code, api_area_code2)
+                await client.async_get_safety_alerts(sido_code, api_sgg, api_emd)
 
             display_name = self._safety_alert_data["sido_name"]
             if sgg_name:
@@ -295,7 +328,7 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if emd_name:
                 display_name += f" {emd_name}"
 
-            unique_id = f"safety_alert_{sido_code}_{sgg_code}_{emd_name}"
+            unique_id = f"safety_alert_{sido_code}_{sgg_code}_{emd_code}"
             await self.async_set_unique_id(unique_id)
             self._abort_if_unique_id_configured()
 
@@ -307,9 +340,10 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "sido_name": self._safety_alert_data["sido_name"],
             }
             if sgg_code:
-                entry_data["area_code2"] = api_area_code2 or ""
+                entry_data["area_code2"] = api_sgg or ""
                 entry_data["area_name2"] = sgg_name
-            if emd_name:
+            if emd_code or emd_name:
+                entry_data["area_code3"] = api_emd or ""
                 entry_data["area_name3"] = emd_name
 
             return self.async_create_entry(
