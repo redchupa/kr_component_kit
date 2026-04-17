@@ -11,10 +11,12 @@ from ..const import LOGGER
 _TIMEOUT = 15
 _BASE_URL = "https://www.safekorea.go.kr/safekorea-kor/ctim/cmsg"
 _HEADERS = {
+    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
     "Accept": "application/json, text/javascript, */*; q=0.01",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "X-Requested-With": "XMLHttpRequest",
     "Referer": "https://www.safekorea.go.kr/safekorea-kor/ctim/cmsg/calamitySms.do",
+    "Origin": "https://www.safekorea.go.kr",
 }
 
 # 전국 17개 시도 — 행정구역이므로 하드코딩
@@ -54,9 +56,9 @@ class SafetyAlertRegionApiClient:
         url = f"{_BASE_URL}/changeSidoList.do"
         try:
             async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
-                response = await session.get(
+                response = await session.post(
                     url,
-                    params={"sbLawArea1": sido_code},
+                    data={"sbLawArea1": sido_code},
                     headers=_HEADERS,
                     verify=False,
                     timeout=_TIMEOUT,
@@ -86,9 +88,9 @@ class SafetyAlertRegionApiClient:
         url = f"{_BASE_URL}/changeSggList.do"
         try:
             async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
-                response = await session.get(
+                response = await session.post(
                     url,
-                    params={"sbLawArea1": sido_code, "sbLawArea2": sgg_code},
+                    data={"sbLawArea1": sido_code, "sbLawArea2": sgg_code},
                     headers=_HEADERS,
                     verify=False,
                     timeout=_TIMEOUT,
