@@ -1,0 +1,21 @@
+{
+  "domain": "kr_component_kit",
+  "name": "한국 복합 컴포넌트 (KR Component Kit)",
+  "codeowners": [
+    "@redchupa"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/redchupa/kr_component_kit/blob/main/README.md",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/redchupa/kr_component_kit/issues",
+  "requirements": [
+    "aiohttp>=3.9.5",
+    "beautifulsoup4>=4.11.0",
+    "cryptography>=42.0.8",
+    "curl-cffi>=0.7.4",
+    "fake-useragent==1.5.1",
+    "pycryptodome==3.20.0",
+    "voluptuous>=0.15.2"
+  ],
+  "version": "1.0.0"
+}
