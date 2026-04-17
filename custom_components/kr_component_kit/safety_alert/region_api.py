@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ssl
 from typing import Dict, List
 
 import aiohttp
@@ -20,13 +19,6 @@ _BASE_HEADERS = {
 }
 
 
-def _make_ssl_context() -> ssl.SSLContext:
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
-
-
 class SafetyAlertRegionApiClient:
     """API client for Safety Alert region code retrieval."""
 
@@ -34,7 +26,6 @@ class SafetyAlertRegionApiClient:
         """Initialize the Safety Alert Region API client."""
         self._session: aiohttp.ClientSession = session
         self._base_url: str = "https://www.safekorea.go.kr/idsiSFK/sfk/cs/sua/web"
-        self._ssl_context = _make_ssl_context()
 
     async def async_get_sido_list(self) -> List[Dict[str, str]]:
         """Get list of sido (시도) regions."""
@@ -44,7 +35,7 @@ class SafetyAlertRegionApiClient:
                 url,
                 json={},
                 headers=_BASE_HEADERS,
-                ssl=self._ssl_context,
+                ssl=False,
                 timeout=_REQUEST_TIMEOUT,
             ) as response:
                 if response.status != 200:
@@ -64,7 +55,7 @@ class SafetyAlertRegionApiClient:
                 return result
         except Exception as e:
             LOGGER.error("Sido list API request failed: %s", e)
-            return []
+            raise
 
     async def async_get_sgg_list(self, sido_code: str) -> List[Dict[str, str]]:
         """Get list of sgg (시군구) regions for a given sido."""
@@ -75,7 +66,7 @@ class SafetyAlertRegionApiClient:
                 url,
                 json=payload,
                 headers=_BASE_HEADERS,
-                ssl=self._ssl_context,
+                ssl=False,
                 timeout=_REQUEST_TIMEOUT,
             ) as response:
                 if response.status != 200:
@@ -94,7 +85,7 @@ class SafetyAlertRegionApiClient:
                 return result
         except Exception as e:
             LOGGER.warning("Sgg list API request failed: %s", e)
-            return []
+            raise
 
     async def async_get_emd_list(self, sido_code: str, sgg_code: str) -> List[Dict[str, str]]:
         """Get list of emd (읍면동) regions for a given sido and sgg."""
@@ -111,7 +102,7 @@ class SafetyAlertRegionApiClient:
                 url,
                 json=payload,
                 headers=_BASE_HEADERS,
-                ssl=self._ssl_context,
+                ssl=False,
                 timeout=_REQUEST_TIMEOUT,
             ) as response:
                 if response.status != 200:
@@ -130,4 +121,4 @@ class SafetyAlertRegionApiClient:
                 return result
         except Exception as e:
             LOGGER.warning("Emd list API request failed: %s", e)
-            return []
+            raise

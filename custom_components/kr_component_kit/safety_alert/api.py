@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ssl
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
@@ -10,13 +9,6 @@ import aiohttp
 
 from .exceptions import SafetyAlertConnectionError
 from ..const import LOGGER, TZ_ASIA_SEOUL
-
-
-def _make_ssl_context() -> ssl.SSLContext:
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-    return ctx
 
 
 class SafetyAlertApiClient:
@@ -28,7 +20,6 @@ class SafetyAlertApiClient:
         self._base_url: str = (
             "https://www.safekorea.go.kr/idsiSFK/sfk/cs/sua/web/DisasterSmsList.do"
         )
-        self._ssl_context = _make_ssl_context()
 
     async def async_get_safety_alerts(
         self,
@@ -78,7 +69,7 @@ class SafetyAlertApiClient:
                 self._base_url,
                 json=payload,
                 headers=headers,
-                ssl=self._ssl_context,
+                ssl=False,
                 timeout=timeout,
             ) as response:
                 LOGGER.debug(f"Safety Alert API response status: {response.status}")
