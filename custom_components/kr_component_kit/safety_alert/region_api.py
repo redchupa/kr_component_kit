@@ -2,20 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Dict, List
-
-import curl_cffi
+from typing import Dict, List, Optional
 
 from ..const import LOGGER
-
-_TIMEOUT = 15
-_BASE_URL = "https://www.safekorea.go.kr/safekorea-kor/ctim/cmsg"
-_HEADERS = {
-    "Accept": "application/json, text/javascript, */*; q=0.01",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "X-Requested-With": "XMLHttpRequest",
-    "Referer": "https://www.safekorea.go.kr/safekorea-kor/ctim/cmsg/calamitySms.do",
-}
 
 # 전국 17개 시도 — 행정구역이므로 하드코딩
 _SIDO_LIST = [
@@ -38,6 +27,67 @@ _SIDO_LIST = [
     {"code": "5000000000", "name": "제주특별자치도"},
 ]
 
+# 시군구 하드코딩 데이터 (sido_code → sgg list)
+_SGG_DATA: Dict[str, List[Dict[str, str]]] = {
+    "4100000000": [  # 경기도
+        {"code": "4111000000", "name": "수원시"},
+        {"code": "4111100000", "name": "수원시 장안구"},
+        {"code": "4111300000", "name": "수원시 권선구"},
+        {"code": "4111500000", "name": "수원시 팔달구"},
+        {"code": "4111700000", "name": "수원시 영통구"},
+        {"code": "4113000000", "name": "성남시"},
+        {"code": "4113100000", "name": "성남시 수정구"},
+        {"code": "4113300000", "name": "성남시 중원구"},
+        {"code": "4113500000", "name": "성남시 분당구"},
+        {"code": "4115000000", "name": "의정부시"},
+        {"code": "4117000000", "name": "안양시"},
+        {"code": "4117100000", "name": "안양시 만안구"},
+        {"code": "4117300000", "name": "안양시 동안구"},
+        {"code": "4119000000", "name": "부천시"},
+        {"code": "4119200000", "name": "부천시 원미구"},
+        {"code": "4119400000", "name": "부천시 소사구"},
+        {"code": "4119600000", "name": "부천시 오정구"},
+        {"code": "4121000000", "name": "광명시"},
+        {"code": "4122000000", "name": "평택시"},
+        {"code": "4125000000", "name": "동두천시"},
+        {"code": "4127000000", "name": "안산시"},
+        {"code": "4127100000", "name": "안산시 상록구"},
+        {"code": "4127300000", "name": "안산시 단원구"},
+        {"code": "4128000000", "name": "고양시"},
+        {"code": "4128100000", "name": "고양시 덕양구"},
+        {"code": "4128500000", "name": "고양시 일산동구"},
+        {"code": "4128700000", "name": "고양시 일산서구"},
+        {"code": "4129000000", "name": "과천시"},
+        {"code": "4131000000", "name": "구리시"},
+        {"code": "4136000000", "name": "남양주시"},
+        {"code": "4137000000", "name": "오산시"},
+        {"code": "4139000000", "name": "시흥시"},
+        {"code": "4141000000", "name": "군포시"},
+        {"code": "4143000000", "name": "의왕시"},
+        {"code": "4145000000", "name": "하남시"},
+        {"code": "4146000000", "name": "용인시"},
+        {"code": "4146100000", "name": "용인시 처인구"},
+        {"code": "4146300000", "name": "용인시 기흥구"},
+        {"code": "4146500000", "name": "용인시 수지구"},
+        {"code": "4148000000", "name": "파주시"},
+        {"code": "4150000000", "name": "이천시"},
+        {"code": "4155000000", "name": "안성시"},
+        {"code": "4157000000", "name": "김포시"},
+        {"code": "4159000000", "name": "화성시"},
+        {"code": "4159100000", "name": "화성시 만세구"},
+        {"code": "4159300000", "name": "화성시 효행구"},
+        {"code": "4159500000", "name": "화성시 병점구"},
+        {"code": "4159700000", "name": "화성시 동탄구"},
+        {"code": "4161000000", "name": "광주시"},
+        {"code": "4163000000", "name": "양주시"},
+        {"code": "4165000000", "name": "포천시"},
+        {"code": "4167000000", "name": "여주시"},
+        {"code": "4180000000", "name": "연천군"},
+        {"code": "4182000000", "name": "가평군"},
+        {"code": "4183000000", "name": "양평군"},
+    ],
+}
+
 
 class SafetyAlertRegionApiClient:
     """API client for Safety Alert region code retrieval."""
@@ -49,65 +99,6 @@ class SafetyAlertRegionApiClient:
         """Return hardcoded list of sido (시도) regions."""
         return _SIDO_LIST
 
-    async def async_get_sgg_list(self, sido_code: str) -> List[Dict[str, str]]:
-        """Get list of sgg (시군구) regions for a given sido."""
-        url = f"{_BASE_URL}/changeSidoList.do"
-        try:
-            async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
-                response = await session.get(
-                    url,
-                    params={"sbLawArea1": sido_code},
-                    headers=_HEADERS,
-                    verify=False,
-                    timeout=_TIMEOUT,
-                )
-                if response.status_code != 200:
-                    LOGGER.warning("Sgg list API failed with status: %s", response.status_code)
-                    return []
-                text = response.text
-                LOGGER.debug("Sgg list raw response: %s", text[:200])
-                if not text.strip() or text.strip().startswith("<"):
-                    LOGGER.warning("Sgg list API returned non-JSON response")
-                    return []
-                data = response.json()
-                result = [
-                    {"code": s.get("bdongCd", ""), "name": s.get("cbsAreaNm", "")}
-                    for s in data
-                    if s.get("cbsAreaNm") != "화성시"
-                ]
-                result.sort(key=lambda x: x["name"])
-                return result
-        except Exception as e:
-            LOGGER.warning("Sgg list API request failed: %s", e)
-            raise
-
-    async def async_get_emd_list(self, sido_code: str, sgg_code: str) -> List[Dict[str, str]]:
-        """Get list of emd (읍면동) regions for a given sido and sgg."""
-        url = f"{_BASE_URL}/changeSggList.do"
-        try:
-            async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
-                response = await session.get(
-                    url,
-                    params={"sbLawArea1": sido_code, "sbLawArea2": sgg_code},
-                    headers=_HEADERS,
-                    verify=False,
-                    timeout=_TIMEOUT,
-                )
-                if response.status_code != 200:
-                    LOGGER.warning("Emd list API failed with status: %s", response.status_code)
-                    return []
-                text = response.text
-                LOGGER.debug("Emd list raw response: %s", text[:200])
-                if not text.strip() or text.strip().startswith("<"):
-                    LOGGER.warning("Emd list API returned non-JSON response")
-                    return []
-                data = response.json()
-                result = [
-                    {"code": e.get("bdongCd", ""), "name": e.get("cbsAreaNm", "")}
-                    for e in data
-                ]
-                result.sort(key=lambda x: x["name"])
-                return result
-        except Exception as e:
-            LOGGER.warning("Emd list API request failed: %s", e)
-            raise
+    async def async_get_sgg_list(self, sido_code: str) -> Optional[List[Dict[str, str]]]:
+        """Return hardcoded sgg list for the given sido, or None if not available."""
+        return _SGG_DATA.get(sido_code)

@@ -211,183 +211,110 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: Optional[Dict[str, Any]] = None
     ):
         """Handle Safety Alert sgg (시군구) selection."""
-        errors: Dict[str, str] = {}
-        error_info: Dict[str, str] = {}
-
         if user_input is not None:
-            sgg_code = user_input["sgg_code"]
-            sgg_name = self._safety_alert_data.get("sgg_options", {}).get(sgg_code, sgg_code)
+            sgg_code = user_input.get("sgg_code") or user_input.get("sgg_name", "")
+            sgg_name = (
+                self._safety_alert_data.get("sgg_options", {}).get(sgg_code, sgg_code)
+            )
             self._safety_alert_data["sgg_code"] = sgg_code
             self._safety_alert_data["sgg_name"] = sgg_name
-
             if user_input.get("add_emd", False):
                 return await self.async_step_safety_alert_emd()
             else:
                 return await self._create_safety_alert_entry()
 
-        # Get sgg list for the selected sido
-        try:
-            async with aiohttp.ClientSession() as session:
-                region_client = SafetyAlertRegionApiClient(session)
-                sgg_list = await region_client.async_get_sgg_list(
-                    self._safety_alert_data["sido_code"]
-                )
+        sido_code = self._safety_alert_data.get("sido_code", "")
+        sido_name = self._safety_alert_data.get("sido_name", "")
 
-                if not sgg_list:
-                    errors["base"] = "no_sgg_available"
-                    error_info["error"] = (
-                        f"No sgg data returned for sido code {self._safety_alert_data['sido_code']}"
-                    )
-                else:
-                    sgg_options = {
-                        region["code"]: region["name"] for region in sgg_list
+        region_client = SafetyAlertRegionApiClient()
+        sgg_list = await region_client.async_get_sgg_list(sido_code)
+
+        if sgg_list:
+            sgg_options = {r["code"]: r["name"] for r in sgg_list}
+            self._safety_alert_data["sgg_options"] = sgg_options
+            return self.async_show_form(
+                step_id="safety_alert_sgg",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required("sgg_code"): vol.In(sgg_options),
+                        vol.Optional("add_emd", default=False): bool,
                     }
-                    self._safety_alert_data["sgg_options"] = sgg_options
+                ),
+                description_placeholders={"sido_name": sido_name},
+            )
 
-                    return self.async_show_form(
-                        step_id="safety_alert_sgg",
-                        data_schema=vol.Schema(
-                            {
-                                vol.Required("sgg_code"): vol.In(sgg_options),
-                                vol.Optional("add_emd", default=False): bool,
-                            }
-                        ),
-                        errors=errors,
-                        description_placeholders=error_info,
-                    )
-
-        except SafetyAlertConnectionError as e:
-            LOGGER.error(f"Safety Alert sgg API failed: {e}")
-            errors["base"] = "cannot_connect"
-            error_info["error"] = str(e)
-        except Exception as e:
-            LOGGER.error(f"Safety Alert sgg setup failed: {e}")
-            errors["base"] = "unknown"
-            error_info["error"] = str(e)
-
+        # No hardcoded data for this sido — fall back to manual text input
         return self.async_show_form(
             step_id="safety_alert_sgg",
             data_schema=vol.Schema(
                 {
-                    vol.Required("sgg_code"): str,
+                    vol.Required("sgg_name"): str,
                     vol.Optional("add_emd", default=False): bool,
                 }
             ),
-            errors=errors,
-            description_placeholders=error_info,
+            description_placeholders={"sido_name": sido_name},
         )
 
     async def async_step_safety_alert_emd(
         self, user_input: Optional[Dict[str, Any]] = None
     ):
-        """Handle Safety Alert emd (읍면동) selection."""
-        errors: Dict[str, str] = {}
-        error_info: Dict[str, str] = {}
-
+        """Handle Safety Alert emd (읍면동) manual input."""
         if user_input is not None:
-            emd_code = user_input["emd_code"]
-            emd_name = self._safety_alert_data.get("emd_options", {}).get(emd_code, emd_code)
-            self._safety_alert_data["emd_code"] = emd_code
-            self._safety_alert_data["emd_name"] = emd_name
+            self._safety_alert_data["emd_name"] = user_input["emd_name"]
             return await self._create_safety_alert_entry()
 
-        # Get emd list for the selected sido and sgg
-        try:
-            async with aiohttp.ClientSession() as session:
-                region_client = SafetyAlertRegionApiClient(session)
-                emd_list = await region_client.async_get_emd_list(
-                    self._safety_alert_data["sido_code"],
-                    self._safety_alert_data["sgg_code"],
-                )
-
-                if not emd_list:
-                    errors["base"] = "no_emd_available"
-                    error_info["error"] = (
-                        f"No emd data returned for sido {self._safety_alert_data['sido_code']} and sgg {self._safety_alert_data['sgg_code']}"
-                    )
-                else:
-                    emd_options = {
-                        region["code"]: region["name"] for region in emd_list
-                    }
-                    self._safety_alert_data["emd_options"] = emd_options
-
-                    return self.async_show_form(
-                        step_id="safety_alert_emd",
-                        data_schema=vol.Schema(
-                            {
-                                vol.Required("emd_code"): vol.In(emd_options),
-                            }
-                        ),
-                        errors=errors,
-                        description_placeholders=error_info,
-                    )
-
-        except SafetyAlertConnectionError as e:
-            LOGGER.error(f"Safety Alert emd API failed: {e}")
-            errors["base"] = "cannot_connect"
-            error_info["error"] = str(e)
-        except Exception as e:
-            LOGGER.error(f"Safety Alert emd setup failed: {e}")
-            errors["base"] = "unknown"
-            error_info["error"] = str(e)
-
+        sgg_name = self._safety_alert_data.get("sgg_name", "")
         return self.async_show_form(
             step_id="safety_alert_emd",
             data_schema=vol.Schema(
                 {
-                    vol.Required("emd_code"): str,
+                    vol.Required("emd_name"): str,
                 }
             ),
-            errors=errors,
-            description_placeholders=error_info,
+            description_placeholders={"sgg_name": sgg_name},
         )
 
     async def _create_safety_alert_entry(self):
         """Create the safety alert config entry."""
         try:
-            # Test the API with the selected region(s)
+            sido_code = self._safety_alert_data["sido_code"]
+            sgg_code = self._safety_alert_data.get("sgg_code", "")
+            sgg_name = self._safety_alert_data.get("sgg_name", "")
+            emd_name = self._safety_alert_data.get("emd_name", "")
+
+            # Use sgg_code for API filtering only if it looks like a numeric code
+            api_area_code2 = sgg_code if sgg_code.isdigit() else None
+
             async with aiohttp.ClientSession() as session:
                 client = SafetyAlertApiClient(session)
+                await client.async_get_safety_alerts(sido_code, api_area_code2)
 
-                area_code = self._safety_alert_data.get(
-                    "sgg_code", self._safety_alert_data["sido_code"]
-                )
-                area_code2 = self._safety_alert_data.get("emd_code")
+            display_name = self._safety_alert_data["sido_name"]
+            if sgg_name:
+                display_name += f" {sgg_name}"
+            if emd_name:
+                display_name += f" {emd_name}"
 
-                alerts = await client.async_get_safety_alerts(
-                    area_code, area_code2, None
-                )
+            unique_id = f"safety_alert_{sido_code}_{sgg_code}_{emd_name}"
+            await self.async_set_unique_id(unique_id)
+            self._abort_if_unique_id_configured()
 
-                # Create display name
-                display_name = self._safety_alert_data["sido_name"]
-                if "sgg_name" in self._safety_alert_data:
-                    display_name += f" {self._safety_alert_data['sgg_name']}"
-                if "emd_name" in self._safety_alert_data:
-                    display_name += f" {self._safety_alert_data['emd_name']}"
+            entry_data = {
+                "service": "safety_alert",
+                "area_code": sido_code,
+                "area_name": display_name,
+                "sido_code": sido_code,
+                "sido_name": self._safety_alert_data["sido_name"],
+            }
+            if sgg_code:
+                entry_data["area_code2"] = api_area_code2 or ""
+                entry_data["area_name2"] = sgg_name
+            if emd_name:
+                entry_data["area_name3"] = emd_name
 
-                unique_id = f"safety_alert_{area_code}"
-                await self.async_set_unique_id(unique_id)
-                self._abort_if_unique_id_configured()
-
-                entry_data = {
-                    "service": "safety_alert",
-                    "area_code": area_code,
-                    "area_name": display_name,
-                    "sido_code": self._safety_alert_data["sido_code"],
-                    "sido_name": self._safety_alert_data["sido_name"],
-                }
-
-                if "sgg_code" in self._safety_alert_data:
-                    entry_data["area_code2"] = self._safety_alert_data["sgg_code"]
-                    entry_data["area_name2"] = self._safety_alert_data["sgg_name"]
-
-                if "emd_code" in self._safety_alert_data:
-                    entry_data["area_code3"] = self._safety_alert_data["emd_code"]
-                    entry_data["area_name3"] = self._safety_alert_data["emd_name"]
-
-                return self.async_create_entry(
-                    title=f"안전알림 ({display_name})", data=entry_data
-                )
+            return self.async_create_entry(
+                title=f"안전알림 ({display_name})", data=entry_data
+            )
 
         except SafetyAlertConnectionError as e:
             LOGGER.error(f"Safety Alert connection failed: {e}")
