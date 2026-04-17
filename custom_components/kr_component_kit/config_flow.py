@@ -219,10 +219,7 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             sgg_name = self._safety_alert_data.get("sgg_options", {}).get(sgg_code, sgg_code)
             self._safety_alert_data["sgg_code"] = sgg_code
             self._safety_alert_data["sgg_name"] = sgg_name
-            if user_input.get("add_emd", False):
-                return await self.async_step_safety_alert_emd()
-            else:
-                return await self._create_safety_alert_entry()
+            return await self.async_step_safety_alert_emd()
 
         sido_code = self._safety_alert_data.get("sido_code", "")
         sido_name = self._safety_alert_data.get("sido_name", "")
@@ -238,7 +235,6 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data_schema=vol.Schema(
                     {
                         vol.Required("sgg_code"): vol.In(sgg_options),
-                        vol.Optional("add_emd", default=False): bool,
                     }
                 ),
                 description_placeholders={"sido_name": sido_name},
@@ -251,7 +247,6 @@ class KoreaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required("sgg_name"): str,
-                    vol.Optional("add_emd", default=False): bool,
                 }
             ),
             errors=errors,
