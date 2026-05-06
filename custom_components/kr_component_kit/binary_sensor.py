@@ -119,7 +119,12 @@ class SafetyAlertSensor(CoordinatorEntity, BinarySensorEntity):
             }
             for a in raw_alerts
         ]
-        alerts.sort(key=lambda x: x["registration_date"], reverse=True)
+        alerts.sort(
+            key=lambda x: x["registration_date"] or datetime.datetime.min.replace(
+                tzinfo=pytz.timezone("Asia/Seoul")
+            ),
+            reverse=True,
+        )
 
         return {
             "latest": alerts[0],
@@ -137,12 +142,16 @@ class SafetyAlertSensor(CoordinatorEntity, BinarySensorEntity):
             return False
 
         latest = raw_alerts[0]
-        return bool(
-            latest.get("EMRGNCY_STEP_NM")
-            and parse_date_value(latest.get("REGIST_DT"))
-            >= datetime.datetime.combine(
-                datetime.date.today(),
-                datetime.time(0, 0, 0),
-                tzinfo=pytz.timezone("Asia/Seoul"),
-            )
+        if not latest.get("EMRGNCY_STEP_NM"):
+            return False
+
+        regist_dt = parse_date_value(latest.get("REGIST_DT"))
+        if regist_dt is None:
+            return False
+
+        today_start = datetime.datetime.combine(
+            datetime.date.today(),
+            datetime.time(0, 0, 0),
+            tzinfo=pytz.timezone("Asia/Seoul"),
         )
+        return regist_dt >= today_start
