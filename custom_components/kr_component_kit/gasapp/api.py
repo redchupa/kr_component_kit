@@ -1,29 +1,25 @@
 """GasApp API client for Home Assistant integration."""
 
-from __future__ import annotations
-
 from typing import Dict, Any, Optional
 
 import aiohttp
 
 from .exceptions import GasAppAuthError, GasAppConnectionError, GasAppDataError
-from ..const import LOGGER
+import logging
+_LOGGER = logging.getLogger(__name__)
 
 
 class GasAppApiClient:
     """API client for GasApp integration."""
 
-    def __init__(self, session: aiohttp.ClientSession) -> None:
-        """Initialize the GasApp API client."""
-        self._session: aiohttp.ClientSession = session
-        self._token: Optional[str] = None
-        self._member_id: Optional[str] = None
-        self._use_contract_num: Optional[str] = None
-        self._base_url: str = "https://app.gasapp.co.kr/api"
+    def __init__(self, session: aiohttp.ClientSession):
+        self._session = session
+        self._token = None
+        self._member_id = None
+        self._use_contract_num = None
+        self._base_url = "https://app.gasapp.co.kr/api"
 
-    def set_credentials(
-        self, token: str, member_id: str, use_contract_num: str
-    ) -> None:
+    def set_credentials(self, token: str, member_id: str, use_contract_num: str):
         """Set authentication credentials."""
         self._token = token
         self._member_id = member_id
@@ -49,7 +45,7 @@ class GasAppApiClient:
             data = await self.async_get_home_data()
             return data is not None
         except Exception as e:
-            LOGGER.error(f"Credential validation failed: {e}")
+            _LOGGER.error(f"Credential validation failed: {e}")
             return False
 
     async def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
@@ -61,7 +57,7 @@ class GasAppApiClient:
             async with self._session.request(
                 method, url, headers=headers, **kwargs
             ) as response:
-                LOGGER.debug(f"GasApp API request to {url} status: {response.status}")
+                _LOGGER.debug(f"GasApp API request to {url} status: {response.status}")
 
                 if response.status == 401:
                     raise GasAppAuthError("Authentication failed")
@@ -75,15 +71,12 @@ class GasAppApiClient:
                 response.raise_for_status()
                 return await response.json()
 
-        except (GasAppAuthError, GasAppConnectionError, GasAppDataError):
-            # 이미 우리가 raise한 예외는 그대로 re-raise
-            raise
         except aiohttp.ClientError as e:
-            LOGGER.error(f"GasApp API request failed: {e}")
-            raise GasAppConnectionError(f"Request failed: {e}") from e
+            _LOGGER.error(f"GasApp API request failed: {e}")
+            raise GasAppConnectionError(f"Request failed: {e}")
         except Exception as e:
-            LOGGER.error(f"Unexpected error in GasApp API request: {e}")
-            raise GasAppDataError(f"Unexpected error: {e}") from e
+            _LOGGER.error(f"Unexpected error in GasApp API request: {e}")
+            raise GasAppDataError(f"Unexpected error: {e}")
 
     async def async_get_home_data(self) -> Dict[str, Any]:
         """Get home dashboard data including bill information."""
@@ -106,7 +99,7 @@ class GasAppApiClient:
                 return home_data["cards"]["bill"].get("history", [])
             return None
         except Exception as e:
-            LOGGER.error(f"Failed to get bill history: {e}")
+            _LOGGER.error(f"Failed to get bill history: {e}")
             raise GasAppDataError(f"Failed to get bill history: {e}")
 
     async def async_get_current_bill(self) -> Optional[Dict[str, Any]]:
@@ -117,5 +110,5 @@ class GasAppApiClient:
                 return home_data["cards"]["bill"]
             return None
         except Exception as e:
-            LOGGER.error(f"Failed to get current bill: {e}")
+            _LOGGER.error(f"Failed to get current bill: {e}")
             raise GasAppDataError(f"Failed to get current bill: {e}")

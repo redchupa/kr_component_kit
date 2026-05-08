@@ -1,18 +1,17 @@
 """GasApp device for Home Assistant integration."""
 
-from __future__ import annotations
-
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Optional
 
 import aiohttp
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .api import GasAppApiClient
 from .exceptions import GasAppAuthError, GasAppConnectionError, GasAppDataError
-from ..const import DOMAIN, LOGGER, TZ_ASIA_SEOUL
+from ..const import DOMAIN
+import logging
+_LOGGER = logging.getLogger(__name__)
 
 
 class GasAppDevice:
@@ -20,37 +19,34 @@ class GasAppDevice:
 
     def __init__(
         self,
-        hass: HomeAssistant,
+        hass,
         entry_id: str,
         token: str,
         member_id: str,
         use_contract_num: str,
         session: aiohttp.ClientSession,
-    ) -> None:
-        """Initialize GasApp device."""
-        self.hass: HomeAssistant = hass
-        self.entry_id: str = entry_id
-        self.token: str = token
-        self.member_id: str = member_id
-        self.use_contract_num: str = use_contract_num
-        self.session: aiohttp.ClientSession = session
-        self.api_client: GasAppApiClient = GasAppApiClient(self.session)
+    ):
+        self.hass = hass
+        self.entry_id = entry_id
+        self.token = token
+        self.member_id = member_id
+        self.use_contract_num = use_contract_num
+        self.session = session
+        self.api_client = GasAppApiClient(self.session)
         self.api_client.set_credentials(token, member_id, use_contract_num)
 
-        self._name: str = f"가스앱 ({use_contract_num})"
-        self._unique_id: str = f"gasapp_{use_contract_num}"
-        self._available: bool = True
-        self.data: Dict[str, Any] = {}
-        self._last_update_success: Optional[datetime] = None
+        self._name = f"가스앱 ({use_contract_num})"
+        self._unique_id = f"gasapp_{use_contract_num}"
+        self._available = True
+        self.data = {}
+        self._last_update_success = None
 
     @property
     def unique_id(self) -> str:
-        """Return unique ID."""
         return self._unique_id
 
     @property
     def device_info(self) -> DeviceInfo:
-        """Return device information."""
         return DeviceInfo(
             identifiers={(DOMAIN, self._unique_id)},
             name=self._name,
@@ -61,10 +57,9 @@ class GasAppDevice:
 
     @property
     def available(self) -> bool:
-        """Return if device is available."""
         return self._available
 
-    async def async_update(self) -> None:
+    async def async_update(self):
         """Fetch data from GasApp API."""
         try:
             # Get home data including bill information
@@ -80,32 +75,32 @@ class GasAppDevice:
                 "home_data": home_data,
                 "bill_history": bill_history,
                 "current_bill": current_bill,
-                "last_updated": datetime.now(TZ_ASIA_SEOUL).isoformat(),
+                "last_updated": datetime.now().isoformat(),
             }
 
             self._available = True
-            self._last_update_success = datetime.now(TZ_ASIA_SEOUL)
-            LOGGER.debug(
+            self._last_update_success = datetime.now()
+            _LOGGER.debug(
                 f"GasApp data updated successfully for {self.use_contract_num}"
             )
 
         except GasAppAuthError as err:
             self._available = False
-            LOGGER.error(
+            _LOGGER.error(
                 f"Authentication error for GasApp {self.use_contract_num}: {err}"
             )
             raise UpdateFailed(f"Authentication failed: {err}")
 
         except (GasAppConnectionError, GasAppDataError) as err:
             self._available = False
-            LOGGER.error(
+            _LOGGER.error(
                 f"Error updating GasApp data for {self.use_contract_num}: {err}"
             )
             raise UpdateFailed(f"Error communicating with GasApp API: {err}")
 
         except Exception as err:
             self._available = False
-            LOGGER.error(
+            _LOGGER.error(
                 f"Unexpected error updating GasApp data for {self.use_contract_num}: {err}"
             )
             raise UpdateFailed(f"Unexpected error: {err}")
@@ -145,12 +140,8 @@ class GasAppDevice:
             return None
         return self.data["current_bill"].get("title2")
 
-    async def async_close_session(self) -> None:
+    async def async_close_session(self):
         """Close the aiohttp session."""
         if self.session:
-            try:
-                await self.session.close()
-            except Exception as e:
-                LOGGER.debug(f"Error closing session: {e}")
-            finally:
-                self.session = None
+            await self.session.close()
+            self.session = None

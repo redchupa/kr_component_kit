@@ -1,13 +1,17 @@
-from logging import getLogger
+"""Constants for 한국 공공데이터 integration."""
+DOMAIN = "kr_public_data"
+CONF_ENTRY_TYPE = "entry_type"
 
-import pytz
-from homeassistant.const import Platform
-
-DOMAIN = "kr_component_kit"
-LOGGER = getLogger(__package__)
-
-PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
-
-CURRENCY_KRW = "KRW"
-ENERGY_KILO_WATT_HOUR = "kWh"
-TZ_ASIA_SEOUL = pytz.timezone("Asia/Seoul")
+ENTRY_WEATHER = "weather_warning"
+ENTRY_TRANSIT = "transit"
+ENTRY_FUEL = "fuel"
+ENTRY_SCHOOL = "school"
+ENTRY_DISASTER = "disaster"
+ENTRY_SAFETY_ALERT = "safety_alert"
+ENTRY_KEPCO = "kepco"
+ENTRY_GASAPP = "gasapp"
+ENTRY_ARISU = "arisu"
+ENTRY_PHARMACY = "pharmacy"
+ENTRY_AIRKOREA = "airkorea"
+ENTRY_KMA_WEATHER = "kma_weather"
+ENTRY_EARTHQUAKE = "earthquake"
