@@ -10,14 +10,30 @@ _LOGGER = logging.getLogger(__name__)
 
 async def fetch_pharmacies(session, api_key, q0, q1="", page=1, num=20):
     """Search pharmacies by region. q0=시도, q1=시군구."""
+    q0 = (q0 or "").strip()
+    q1 = (q1 or "").strip()
     params = {"serviceKey": api_key, "Q0": q0, "Q1": q1,
               "ORD": "NAME", "pageNo": str(page), "numOfRows": str(num)}
     async with session.get(PHARMACY_URL, params=params,
                            timeout=aiohttp.ClientTimeout(total=15)) as r:
         text = await r.text()
-    root = ET.fromstring(text)
+    try:
+        root = ET.fromstring(text)
+    except ET.ParseError as e:
+        _LOGGER.error("Pharmacy XML parse failed (Q0=%s Q1=%s): %s | body=%s",
+                      q0, q1, e, text[:500])
+        raise
+    code = root.findtext(".//resultCode") or root.findtext(".//returnReasonCode")
+    msg = root.findtext(".//resultMsg") or root.findtext(".//returnAuthMsg")
+    if code and code not in ("00", "0"):
+        _LOGGER.warning("Pharmacy API error Q0=%s Q1=%s code=%s msg=%s | body=%s",
+                        q0, q1, code, msg, text[:500])
+    items = root.findall(".//item")
+    if not items:
+        _LOGGER.info("Pharmacy no items Q0=%s Q1=%s code=%s msg=%s",
+                     q0, q1, code, msg)
     results = []
-    for item in root.findall(".//item"):
+    for item in items:
         duty_time = {}
         for day_n in range(1, 9):  # dutyTime1~8 (월~일+공휴일)
             s = item.findtext(f"dutyTime{day_n}s", "")
