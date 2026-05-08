@@ -1,4 +1,4 @@
-"""Config flow for 한국 공공데이터."""
+"""Config flow for 한국 컴포넌트 키트."""
 from __future__ import annotations
 import logging
 from typing import Any

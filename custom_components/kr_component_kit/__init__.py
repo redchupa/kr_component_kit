@@ -1,4 +1,4 @@
-"""한국 공공데이터 - unified Korean public data integration."""
+"""한국 컴포넌트 키트 - unified Korean public data integration."""
 from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform

@@ -1,4 +1,4 @@
-"""Constants for 한국 공공데이터 integration."""
+"""Constants for 한국 컴포넌트 키트 integration."""
 import logging
 from zoneinfo import ZoneInfo
 
