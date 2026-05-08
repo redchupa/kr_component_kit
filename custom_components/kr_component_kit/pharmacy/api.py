@@ -2,25 +2,31 @@
 from __future__ import annotations
 import logging
 import xml.etree.ElementTree as ET
-from typing import Any
-import aiohttp
+import curl_cffi
 from . import PHARMACY_URL
 
 _LOGGER = logging.getLogger(__name__)
 
-async def fetch_pharmacies(session, api_key, q0, q1="", page=1, num=20):
+_HEADERS = {
+    "Accept": "application/xml,text/xml;q=0.9,*/*;q=0.8",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+}
+
+
+async def fetch_pharmacies(api_key, q0, q1="", page=1, num=20):
     """Search pharmacies by region. q0=시도, q1=시군구."""
     q0 = (q0 or "").strip()
     q1 = (q1 or "").strip()
     params = {"serviceKey": api_key, "Q0": q0, "Q1": q1,
               "ORD": "NAME", "pageNo": str(page), "numOfRows": str(num)}
-    headers = {"User-Agent": "Mozilla/5.0 (kr_component_kit)"}
-    async with session.get(PHARMACY_URL, params=params, headers=headers,
-                           timeout=aiohttp.ClientTimeout(total=15)) as r:
-        text = await r.text()
-        if r.status != 200:
+    async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
+        r = await session.get(PHARMACY_URL, params=params,
+                               headers=_HEADERS, verify=False, timeout=15)
+        text = r.text
+        if r.status_code != 200:
             _LOGGER.warning("Pharmacy HTTP %s Q0=%s Q1=%s body=%s",
-                            r.status, q0, q1, text[:200])
+                            r.status_code, q0, q1, text[:200])
     try:
         root = ET.fromstring(text)
     except ET.ParseError as e:
@@ -55,10 +61,10 @@ async def fetch_pharmacies(session, api_key, q0, q1="", page=1, num=20):
         })
     return results
 
+
 async def validate_pharmacy_api(api_key):
     try:
-        async with aiohttp.ClientSession() as s:
-            r = await fetch_pharmacies(s, api_key, "서울특별시", num=1)
-            return len(r) > 0
+        r = await fetch_pharmacies(api_key, "서울특별시", num=1)
+        return len(r) > 0
     except Exception:
         return False
