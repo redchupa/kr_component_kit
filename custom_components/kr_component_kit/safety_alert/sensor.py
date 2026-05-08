@@ -14,9 +14,28 @@ from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..const import DOMAIN
-from ..utils import TZ_ASIA_SEOUL, parse_date_value
+from ..const import DOMAIN, TZ_ASIA_SEOUL
 from .coordinator import SafetyAlertCoordinator
+
+
+def _parse_regist_dt(raw: str | None) -> datetime | None:
+    """Parse REGIST_DT strings emitted by safekorea (Asia/Seoul)."""
+    if not raw:
+        return None
+    raw = raw.strip()
+    for fmt in (
+        "%Y/%m/%d %H:%M:%S",
+        "%Y/%m/%d %H:%M",
+        "%Y/%m/%d",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d",
+    ):
+        try:
+            return datetime.strptime(raw, fmt).replace(tzinfo=TZ_ASIA_SEOUL)
+        except ValueError:
+            continue
+    return None
 
 
 def _safety_alert_device(area_code: str, area_name: str) -> DeviceInfo:
@@ -136,7 +155,7 @@ class SafetyAlertBinarySensor(
         latest = alerts[0]
         if not latest.get("EMRGNCY_STEP_NM"):
             return False
-        regist_dt = parse_date_value(latest.get("REGIST_DT"))
+        regist_dt = _parse_regist_dt(latest.get("REGIST_DT"))
         if regist_dt is None:
             return False
         today_start = datetime.combine(
