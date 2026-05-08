@@ -1,4 +1,4 @@
-"""LLM API registration for kr_public_data services.
+"""LLM API registration for kr_component_kit services.
 
 One llm.API is registered per added config entry, exposing only the tools
 relevant to that service. The voice-satellite-card-llm-tools result schema

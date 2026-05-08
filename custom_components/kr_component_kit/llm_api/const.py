@@ -1,4 +1,4 @@
-"""Constants for kr_public_data LLM API tools."""
+"""Constants for kr_component_kit LLM API tools."""
 from __future__ import annotations
 
 from ..const import (
@@ -17,7 +17,7 @@ from ..const import (
     ENTRY_WEATHER,
 )
 
-SOURCE = "kr_public_data"
+SOURCE = "kr_component_kit"
 
 API_NAMES: dict[str, str] = {
     ENTRY_KMA_WEATHER: "한국 공공데이터: 기상청 날씨",

@@ -2,7 +2,7 @@
 import logging
 from zoneinfo import ZoneInfo
 
-DOMAIN = "kr_public_data"
+DOMAIN = "kr_component_kit"
 CONF_ENTRY_TYPE = "entry_type"
 
 LOGGER = logging.getLogger(__package__)

@@ -1,4 +1,4 @@
-"""SVG renderer helpers for kr_public_data LLM tools.
+"""SVG renderer helpers for kr_component_kit LLM tools.
 
 The voice-satellite card renders ``featured_image`` and
 ``results[].image_url`` as ``<img>`` elements, which accept ``data:`` URLs.

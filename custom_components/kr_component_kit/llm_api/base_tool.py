@@ -1,4 +1,4 @@
-"""Base tool class for kr_public_data LLM tools."""
+"""Base tool class for kr_component_kit LLM tools."""
 from __future__ import annotations
 
 import logging

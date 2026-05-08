@@ -199,7 +199,7 @@ class SchoolClassCalendar(CoordinatorEntity, CalendarEntity):
 
         # Get translated lunch text (defaults to Korean if translation unavailable)
         try:
-            lunch_text = hass.localize("component.kr_public_data.calendar.school.lunch") or "점심시간"
+            lunch_text = hass.localize("component.kr_component_kit.calendar.school.lunch") or "점심시간"
         except Exception:
             lunch_text = "점심시간"
 
