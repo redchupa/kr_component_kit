@@ -2,6 +2,7 @@
 from __future__ import annotations
 import logging
 import xml.etree.ElementTree as ET
+from urllib.parse import unquote
 import curl_cffi
 from . import PHARMACY_URL
 
@@ -18,7 +19,13 @@ async def fetch_pharmacies(api_key, q0, q1="", page=1, num=20):
     """Search pharmacies by region. q0=시도, q1=시군구."""
     q0 = (q0 or "").strip()
     q1 = (q1 or "").strip()
-    params = {"serviceKey": api_key, "Q0": q0, "Q1": q1,
+    # Accept either Encoding or Decoding form of the data.go.kr service key.
+    # If it looks already URL-encoded (e.g. contains %2B, %2F, %3D), unquote
+    # once so curl_cffi's own quoting doesn't double-encode it.
+    key = (api_key or "").strip()
+    if "%" in key:
+        key = unquote(key)
+    params = {"serviceKey": key, "Q0": q0, "Q1": q1,
               "ORD": "NAME", "pageNo": str(page), "numOfRows": str(num)}
     async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
         r = await session.get(PHARMACY_URL, params=params,
