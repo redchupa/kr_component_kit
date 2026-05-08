@@ -24,7 +24,7 @@ PLATFORM_MAP = {
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
-    etype = entry.data[CONF_ENTRY_TYPE]
+    etype = entry.data.get(CONF_ENTRY_TYPE) or entry.data.get("service")
     store: dict = {}
 
     if etype == ENTRY_WEATHER:
@@ -87,10 +87,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         from .safety_alert.coordinator import SafetyAlertCoordinator
         regions = entry.data.get("regions", [])
         if not regions and entry.data.get("area_code"):
-            regions = [{"code": entry.data["area_code"], "name": entry.data.get("area_name", "")}]
+            regions = [{
+                "code": entry.data["area_code"],
+                "name": entry.data.get("area_name", ""),
+                "code2": entry.data.get("area_code2"),
+                "code3": entry.data.get("area_code3"),
+            }]
         coordinators = {}
         for region in regions:
-            c = SafetyAlertCoordinator(hass, region["code"])
+            c = SafetyAlertCoordinator(
+                hass,
+                region["code"],
+                region.get("code2"),
+                region.get("code3"),
+            )
             await c.async_config_entry_first_refresh()
             coordinators[region["code"]] = c
         store = {"coordinators": coordinators, "regions": regions}

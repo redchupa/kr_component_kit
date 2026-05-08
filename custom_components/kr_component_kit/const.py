@@ -1,6 +1,12 @@
 """Constants for 한국 공공데이터 integration."""
+import logging
+from zoneinfo import ZoneInfo
+
 DOMAIN = "kr_public_data"
 CONF_ENTRY_TYPE = "entry_type"
+
+LOGGER = logging.getLogger(__package__)
+TZ_ASIA_SEOUL = ZoneInfo("Asia/Seoul")
 
 ENTRY_WEATHER = "weather_warning"
 ENTRY_TRANSIT = "transit"

@@ -108,9 +108,11 @@ class SafetyAlertApiClient:
             if dt_match:
                 regist_dt = dt_match.group(1).strip()
 
-            step_match = re.search(r"긴급단계\s*:\s*([^\ㆍ]+)", info_text)
+            step_match = re.search(
+                r"긴급단계\s*:\s*(.+?)(?=\s+송출지역|$)", info_text
+            )
             if step_match:
-                emrgncy_step = step_match.group(1).strip()
+                emrgncy_step = step_match.group(1).strip().rstrip("ㆍ").strip()
 
             area_match = re.search(r"송출지역\s*:\s*(.+?)$", info_text)
             if area_match:
