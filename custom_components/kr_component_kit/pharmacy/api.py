@@ -14,9 +14,13 @@ async def fetch_pharmacies(session, api_key, q0, q1="", page=1, num=20):
     q1 = (q1 or "").strip()
     params = {"serviceKey": api_key, "Q0": q0, "Q1": q1,
               "ORD": "NAME", "pageNo": str(page), "numOfRows": str(num)}
-    async with session.get(PHARMACY_URL, params=params,
+    headers = {"User-Agent": "Mozilla/5.0 (kr_component_kit)"}
+    async with session.get(PHARMACY_URL, params=params, headers=headers,
                            timeout=aiohttp.ClientTimeout(total=15)) as r:
         text = await r.text()
+        if r.status != 200:
+            _LOGGER.warning("Pharmacy HTTP %s Q0=%s Q1=%s body=%s",
+                            r.status, q0, q1, text[:200])
     try:
         root = ET.fromstring(text)
     except ET.ParseError as e:
