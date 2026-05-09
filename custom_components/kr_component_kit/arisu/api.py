@@ -152,7 +152,12 @@ class ArisuApiClient:
                     )
 
                 html_content = await response.text()
-                _LOGGER.debug(f"Response content: {html_content}")
+                # Do not log full body — contains customer name, address, account #.
+                _LOGGER.debug(
+                    "Arisu response: %d bytes (status=%s)",
+                    len(html_content),
+                    response.status,
+                )
 
                 if 'id="totAmt"' in html_content and "value=" in html_content:
                     return self._parse_html_response(html_content)

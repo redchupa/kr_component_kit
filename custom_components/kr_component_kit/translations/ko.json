@@ -109,8 +109,7 @@
       "safety_alert": {
         "title": "안전알림 설정",
         "data": {
-          "area_code": "지역 코드",
-          "area_name": "지역 이름"
+          "area_codes": "지역 (시도/시군구)"
         }
       },
       "kepco": {

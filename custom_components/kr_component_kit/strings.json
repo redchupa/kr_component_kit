@@ -109,8 +109,7 @@
       "safety_alert": {
         "title": "Safety Alert",
         "data": {
-          "area_code": "Code",
-          "area_name": "Name"
+          "area_codes": "Regions (시도/시군구)"
         }
       },
       "kepco": {

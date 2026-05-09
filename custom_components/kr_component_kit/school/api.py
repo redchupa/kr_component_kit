@@ -4,11 +4,17 @@ import logging, xml.etree.ElementTree as ET
 from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 from . import NEIS_BASE, ENDPOINTS
 
 _LOGGER = logging.getLogger(__name__)
 KST = ZoneInfo("Asia/Seoul")
+_TIMEOUT = ClientTimeout(total=15)
+
+
+class NeisApiError(Exception):
+    """Raised when NEIS API returns a non-success result code or unexpected response."""
+
 
 def _ay() -> int:
     now = datetime.now(KST)
@@ -21,14 +27,21 @@ class NeisApiClient:
 
     async def _req(self, ep: str, params: dict | None = None) -> dict[str, Any]:
         p = {"KEY": self.api_key, "Type": "xml", "pIndex": 1, "pSize": 1000, **(params or {})}
-        async with self.session.get(f"{NEIS_BASE}/{ep}", params=p) as r:
+        async with self.session.get(f"{NEIS_BASE}/{ep}", params=p, timeout=_TIMEOUT) as r:
+            if r.status != 200:
+                snippet = (await r.text())[:200].strip()
+                raise NeisApiError(f"NEIS HTTP {r.status}: {snippet}")
             text = await r.text()
-        root = ET.fromstring(text)
+        try:
+            root = ET.fromstring(text)
+        except ET.ParseError as e:
+            snippet = text[:200].strip()
+            raise NeisApiError(f"NEIS XML parse failed: {snippet}") from e
         res = root.find(".//RESULT")
         if res is not None:
             code = res.findtext("CODE", "")
             if code != "INFO-000":
-                raise Exception(f"NEIS {code}: {res.findtext('MESSAGE','')}")
+                raise NeisApiError(f"NEIS {code}: {res.findtext('MESSAGE','')}")
         rows = []
         for row in root.findall(".//row"):
             rows.append({c.tag: c.text for c in row})
