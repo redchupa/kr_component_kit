@@ -52,6 +52,11 @@ async def validate_disaster_api(api_key: str) -> bool:
 
 
 def _parse_payload(text: str) -> list[dict[str, Any]]:
+    """Parse XML or JSON safetydata.go.kr response.
+
+    Raises RuntimeError if the body is neither valid XML nor a dict-shaped JSON.
+    """
+    # Try XML first (production usually returns XML).
     try:
         root = ET.fromstring(text)
         return [
@@ -66,8 +71,19 @@ def _parse_payload(text: str) -> list[dict[str, Any]]:
         ]
     except ET.ParseError:
         pass
-    data = json.loads(text)
+    # Fall back to JSON.
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        snippet = text[:200].strip()
+        raise RuntimeError(
+            f"Disaster 응답이 XML/JSON이 아닙니다 (서비스 키 확인): {snippet}"
+        ) from e
+    if not isinstance(data, dict):
+        raise RuntimeError(f"Disaster JSON이 dict가 아닙니다: {type(data).__name__}")
     body = data.get("body", [])
+    if not isinstance(body, list):
+        raise RuntimeError(f"Disaster JSON 'body' 가 list가 아닙니다: {type(body).__name__}")
     return [
         {
             "message": i.get("MSG_CN", ""),
@@ -77,6 +93,7 @@ def _parse_payload(text: str) -> list[dict[str, Any]]:
             "disaster_type": i.get("DST_SE_NM", ""),
         }
         for i in body
+        if isinstance(i, dict)
     ]
 
 
