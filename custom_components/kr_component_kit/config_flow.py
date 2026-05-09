@@ -65,6 +65,9 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not areas:
                 errors["area_codes"] = "no_selection"
             elif await validate_kma_api(api_key, areas[0]):
+                await self.async_set_unique_id(
+                    f"{ENTRY_WEATHER}_" + "_".join(sorted(areas)))
+                self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title="기상특보",
                     data={CONF_ENTRY_TYPE: ENTRY_WEATHER,
@@ -177,6 +180,8 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     # ── 대중교통 완료 ──
     async def async_step_transit_done(self, user_input=None) -> FlowResult:
+        await self.async_set_unique_id(ENTRY_TRANSIT)
+        self._abort_if_unique_id_configured()
         return self.async_create_entry(title="대중교통", data=self._data)
 
     # ══════════ 유가정보 ══════════
@@ -209,6 +214,9 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 for s in sidos:
                     for f in fuels:
                         configs.append({"sido_code": s, "fuel_code": f})
+                await self.async_set_unique_id(
+                    f"{ENTRY_FUEL}_" + "_".join(sorted(sidos)) + "__" + "_".join(sorted(fuels)))
+                self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title="유가정보",
                     data={CONF_ENTRY_TYPE: ENTRY_FUEL,
@@ -315,6 +323,12 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._data.update(user_input)
             title = "학교정보"
+            # School entry uniquely identified by school code + grade-classes.
+            classes = "_".join(self._data.get("grade_classes", []))
+            await self.async_set_unique_id(
+                f"{ENTRY_SCHOOL}_{self._data.get('atpt_code', '')}_"
+                f"{self._data.get('school_code', '')}_{classes}")
+            self._abort_if_unique_id_configured()
             return self.async_create_entry(title=title, data=self._data)
         schema: dict = {vol.Required("period_1", default=defaults[1]): str}
         for i in range(2, 8):
@@ -353,6 +367,8 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if sub:
                     region = sub  # 세부 지역이 있으면 그것을 사용
                 title = f"재난정보 - {region}" if region else "재난정보"
+                await self.async_set_unique_id(f"{ENTRY_DISASTER}_{region or 'all'}")
+                self._abort_if_unique_id_configured()
                 return self.async_create_entry(title=title,
                     data={CONF_ENTRY_TYPE: ENTRY_DISASTER,
                           "api_key": api_key,
@@ -409,6 +425,9 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "no_selection"
             else:
                 region_items = [{"code": c, "name": all_regions.get(c, c)} for c in areas]
+                await self.async_set_unique_id(
+                    f"{ENTRY_SAFETY_ALERT}_" + "_".join(sorted(areas)))
+                self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title="안전알림",
                     data={CONF_ENTRY_TYPE: ENTRY_SAFETY_ALERT, "regions": region_items})
@@ -438,6 +457,8 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if not logged_in:
                     errors["base"] = "invalid_auth"
                 else:
+                    await self.async_set_unique_id(f"{ENTRY_KEPCO}_{username}")
+                    self._abort_if_unique_id_configured()
                     return self.async_create_entry(
                         title=f"한전 ({username})",
                         data={CONF_ENTRY_TYPE: ENTRY_KEPCO,
@@ -473,6 +494,9 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if not ok:
                     errors["base"] = "invalid_auth"
                 else:
+                    await self.async_set_unique_id(
+                        f"{ENTRY_GASAPP}_{user_input['contract_num']}")
+                    self._abort_if_unique_id_configured()
                     return self.async_create_entry(
                         title=f"가스앱 ({user_input['contract_num']})",
                         data={CONF_ENTRY_TYPE: ENTRY_GASAPP,
@@ -510,6 +534,9 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     # a wrong customer number/name combination.
                     errors["base"] = "invalid_auth"
                 else:
+                    await self.async_set_unique_id(
+                        f"{ENTRY_ARISU}_{user_input['customer_number']}")
+                    self._abort_if_unique_id_configured()
                     return self.async_create_entry(
                         title=f"아리수 ({user_input['customer_number']})",
                         data={CONF_ENTRY_TYPE: ENTRY_ARISU,
@@ -567,6 +594,9 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             sgg_opts[name] = name
         if user_input is not None:
             q1 = user_input.get("q1", "")
+            await self.async_set_unique_id(
+                f"{ENTRY_PHARMACY}_{q0}_{q1 or 'all'}")
+            self._abort_if_unique_id_configured()
             return self.async_create_entry(
                 title=f"약국 정보 ({q0}{f' {q1}' if q1 else ''})",
                 data={
@@ -619,6 +649,8 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             selected = user_input.get("stations", [])
             self._data["stations"] = [{"stationName": s} for s in selected]
             self._data["sido"] = self._air_sido
+            await self.async_set_unique_id(f"{ENTRY_AIRKOREA}_{self._air_sido}")
+            self._abort_if_unique_id_configured()
             return self.async_create_entry(title="에어코리아", data=self._data)
         station_list = STATIONS_BY_SIDO.get(self._air_sido, [])
         labels = {s: s for s in station_list}
@@ -672,6 +704,10 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._data["air_station"] = user_input.get("air_station", "")
             self._data["area_no"] = SIDO_AREA_CODE.get(self._kma_sido, "")
             self._data["sido"] = self._kma_sido
+            await self.async_set_unique_id(
+                f"{ENTRY_KMA_WEATHER}_{self._kma_sido}_"
+                + "_".join(sorted(r["name"] for r in regions)))
+            self._abort_if_unique_id_configured()
             return self.async_create_entry(title="기상청 날씨예보", data=self._data)
         labels = {k: k for k in sgg_map.keys()}
         air_stations = STATIONS_BY_SIDO.get(self._kma_sido, [])
@@ -686,6 +722,8 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_earthquake(self, user_input=None) -> FlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
+            await self.async_set_unique_id(ENTRY_EARTHQUAKE)
+            self._abort_if_unique_id_configured()
             return self.async_create_entry(title="지진 정보",
                 data={CONF_ENTRY_TYPE: ENTRY_EARTHQUAKE,
                       "api_key": user_input["api_key"],
