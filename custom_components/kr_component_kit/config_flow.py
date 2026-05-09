@@ -454,25 +454,16 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ══════════ 약국 ══════════
 
     async def async_step_pharmacy(self, user_input=None) -> FlowResult:
+        """Step 1: 서비스 키 + 시도 선택 (서비스 키 즉시 검증)."""
         from .pharmacy.api import PharmacyApiError, fetch_pharmacies
+        from .pharmacy.regions import SIDO_LIST
         errors: dict[str, str] = {}
-        sido_opts = {
-            "서울특별시": "서울특별시", "부산광역시": "부산광역시",
-            "대구광역시": "대구광역시", "인천광역시": "인천광역시",
-            "광주광역시": "광주광역시", "대전광역시": "대전광역시",
-            "울산광역시": "울산광역시", "세종특별자치시": "세종특별자치시",
-            "경기도": "경기도", "강원특별자치도": "강원특별자치도",
-            "충청북도": "충청북도", "충청남도": "충청남도",
-            "전북특별자치도": "전북특별자치도", "전라남도": "전라남도",
-            "경상북도": "경상북도", "경상남도": "경상남도",
-            "제주특별자치도": "제주특별자치도",
-        }
+        sido_opts = {name: name for name in SIDO_LIST}
         if user_input is not None:
             api_key = user_input["api_key"].strip()
             q0 = user_input["q0"]
-            q1 = user_input.get("q1", "").strip()
             try:
-                await fetch_pharmacies(api_key, q0, q1, num=1)
+                await fetch_pharmacies(api_key, q0, "", num=1)
             except PharmacyApiError as e:
                 _LOGGER.warning("Pharmacy validation failed: %s", e)
                 errors["base"] = "invalid_api_key"
@@ -480,23 +471,49 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.warning("Pharmacy validation error: %s", e)
                 errors["base"] = "cannot_connect"
             else:
-                return self.async_create_entry(
-                    title="약국 정보",
-                    data={CONF_ENTRY_TYPE: ENTRY_PHARMACY,
-                          "api_key": api_key, "q0": q0, "q1": q1})
+                self._data["pharmacy_api_key"] = api_key
+                self._data["pharmacy_q0"] = q0
+                return await self.async_step_pharmacy_sgg()
         return self.async_show_form(
             step_id="pharmacy",
             data_schema=vol.Schema({
                 vol.Required("api_key"): str,
                 vol.Required("q0", default="서울특별시"): vol.In(sido_opts),
-                vol.Optional("q1", default="",
-                             description={"suggested_value": "시군구 (예: 강남구)"}): str,
             }),
             errors=errors,
             description_placeholders={
                 "api_key_desc": "공공데이터포털(data.go.kr)에서 발급받은 서비스 키",
                 "q0_desc": "시도를 선택하세요",
-                "q1_desc": "시군구를 입력하세요 (선택, 예: 강남구)",
+            },
+        )
+
+    async def async_step_pharmacy_sgg(self, user_input=None) -> FlowResult:
+        """Step 2: 선택된 시도의 시군구 dropdown (선택 사항)."""
+        from .pharmacy.regions import get_sgg_list
+        q0 = self._data.get("pharmacy_q0", "")
+        sgg_list = get_sgg_list(q0)
+        # "" 키 = 시도 전체 검색 (시군구 미지정)
+        sgg_opts: dict[str, str] = {"": f"{q0} 전체 (시군구 미지정)"}
+        for name in sgg_list:
+            sgg_opts[name] = name
+        if user_input is not None:
+            q1 = user_input.get("q1", "")
+            return self.async_create_entry(
+                title=f"약국 정보 ({q0}{f' {q1}' if q1 else ''})",
+                data={
+                    CONF_ENTRY_TYPE: ENTRY_PHARMACY,
+                    "api_key": self._data["pharmacy_api_key"],
+                    "q0": q0,
+                    "q1": q1,
+                },
+            )
+        return self.async_show_form(
+            step_id="pharmacy_sgg",
+            data_schema=vol.Schema({
+                vol.Optional("q1", default=""): vol.In(sgg_opts),
+            }),
+            description_placeholders={
+                "q1_desc": f"{q0}의 시군구를 선택하세요 (미지정 시 시도 전체)",
             },
         )
 

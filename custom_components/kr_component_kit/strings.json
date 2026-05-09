@@ -136,11 +136,16 @@
         }
       },
       "pharmacy": {
-        "title": "Pharmacy",
+        "title": "Pharmacy — Service Key & Province",
         "data": {
-          "api_key": "Key",
-          "q0": "Province",
-          "q1": "City"
+          "api_key": "Service Key",
+          "q0": "Province"
+        }
+      },
+      "pharmacy_sgg": {
+        "title": "Pharmacy — Select City/District",
+        "data": {
+          "q1": "City/District"
         }
       },
       "transit_bus_select": {
