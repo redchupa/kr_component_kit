@@ -77,6 +77,10 @@ def _apparent_temp(temp, wind_speed, humidity):
     return round(temp, 1)
 
 
+class KMAApiError(Exception):
+    """Raised when KMA returns a non-success status / resultCode."""
+
+
 async def fetch_vilage_forecast(session, api_key, nx, ny) -> list[dict]:
     base_date, base_time = _base_time_vilage()
     params = {"serviceKey": api_key, "numOfRows": "1000", "pageNo": "1",
@@ -85,18 +89,20 @@ async def fetch_vilage_forecast(session, api_key, nx, ny) -> list[dict]:
     async with session.get(VILAGE_URL, params=params,
                            timeout=aiohttp.ClientTimeout(total=20)) as r:
         text = await r.text()
-        if r.status != 200:
-            _LOGGER.error("KMA HTTP %s: %s", r.status, text[:200])
-            return []
+        status = r.status
+    if status != 200:
+        snippet = text[:200].strip()
+        raise KMAApiError(f"KMA HTTP {status}: {snippet}")
     try:
         data = json.loads(text)
-    except json.JSONDecodeError:
-        _LOGGER.error("KMA not JSON: %s", text[:200])
-        return []
-    rc = data.get("response", {}).get("header", {}).get("resultCode", "")
+    except json.JSONDecodeError as e:
+        snippet = text[:200].strip()
+        raise KMAApiError(f"KMA 응답이 JSON이 아닙니다 (서비스 키 확인): {snippet}") from e
+    header = data.get("response", {}).get("header", {})
+    rc = header.get("resultCode", "")
     if rc != "00":
-        _LOGGER.warning("KMA error: %s", data.get("response",{}).get("header",{}).get("resultMsg",""))
-        return []
+        msg = header.get("resultMsg", "")
+        raise KMAApiError(f"KMA code={rc} msg={msg}")
     items = data.get("response", {}).get("body", {}).get("items", {}).get("item", [])
     return items if isinstance(items, list) else []
 

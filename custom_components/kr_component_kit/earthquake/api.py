@@ -11,6 +11,10 @@ from . import EQ_URL
 _LOGGER = logging.getLogger(__name__)
 
 
+class EarthquakeApiError(Exception):
+    """Raised when KMA earthquake API returns a non-success / unparseable response."""
+
+
 async def fetch_earthquakes(session, api_key, count=20) -> list[dict]:
     from datetime import datetime, timedelta
     end = datetime.now()
@@ -22,8 +26,21 @@ async def fetch_earthquakes(session, api_key, count=20) -> list[dict]:
     async with session.get(EQ_URL, params=params,
                            timeout=aiohttp.ClientTimeout(total=15)) as r:
         text = await r.text()
+        status = r.status
+    if status != 200:
+        snippet = text[:200].strip()
+        raise EarthquakeApiError(f"Earthquake HTTP {status}: {snippet}")
+    # Try JSON first.
     try:
         data = json.loads(text)
+    except json.JSONDecodeError:
+        data = None
+    if isinstance(data, dict):
+        header = data.get("response", {}).get("header", {})
+        rc = header.get("resultCode", "")
+        if rc and rc != "00":
+            msg = header.get("resultMsg", "")
+            raise EarthquakeApiError(f"Earthquake code={rc} msg={msg}")
         total = data.get("response", {}).get("body", {}).get("totalCount", 0)
         if total == 0:
             return []
@@ -33,14 +50,19 @@ async def fetch_earthquakes(session, api_key, count=20) -> list[dict]:
         if isinstance(items, dict):
             items = [items]
         return [_parse(i) for i in items]
-    except (json.JSONDecodeError, AttributeError):
-        pass
+    # Fall back to XML.
     try:
         root = ET.fromstring(text)
-        return [_parse_xml(i) for i in root.findall(".//item")]
-    except ET.ParseError:
-        pass
-    return []
+    except ET.ParseError as e:
+        snippet = text[:200].strip()
+        raise EarthquakeApiError(
+            f"Earthquake 응답이 JSON/XML이 아닙니다 (서비스 키/신청 상태 확인): {snippet}"
+        ) from e
+    rc_node = root.findtext(".//resultCode") or ""
+    if rc_node and rc_node != "00":
+        msg = root.findtext(".//resultMsg", "")
+        raise EarthquakeApiError(f"Earthquake code={rc_node} msg={msg}")
+    return [_parse_xml(i) for i in root.findall(".//item")]
 
 
 def _parse(i):

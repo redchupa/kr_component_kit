@@ -10,6 +10,34 @@ from . import STATION_URL, REALTIME_URL, FORECAST_URL
 
 _LOGGER = logging.getLogger(__name__)
 KST = ZoneInfo("Asia/Seoul")
+_TIMEOUT = aiohttp.ClientTimeout(total=15)
+
+
+class AirKoreaApiError(Exception):
+    """Raised when AirKorea returns a non-success status / resultCode or invalid body."""
+
+
+def _check_status_and_parse(text: str, status: int) -> dict:
+    """Validate HTTP status and JSON parse, raising AirKoreaApiError on failure."""
+    if status != 200:
+        snippet = text[:200].strip()
+        raise AirKoreaApiError(f"HTTP {status}: {snippet}")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        snippet = text[:200].strip()
+        raise AirKoreaApiError(
+            f"AirKorea 응답이 JSON이 아닙니다 (서비스 키/신청 상태 확인): {snippet}"
+        ) from e
+
+
+def _check_result_code(data: dict) -> None:
+    """Raise AirKoreaApiError if the response carries a non-success resultCode."""
+    header = data.get("response", {}).get("header", {})
+    rc = header.get("resultCode", "")
+    if rc and rc != "00":
+        msg = header.get("resultMsg", "")
+        raise AirKoreaApiError(f"AirKorea code={rc} msg={msg}")
 
 
 async def search_stations(session, api_key, addr="") -> list[dict]:
@@ -17,15 +45,11 @@ async def search_stations(session, api_key, addr="") -> list[dict]:
               "numOfRows": "100", "pageNo": "1"}
     if addr:
         params["addr"] = addr
-    async with session.get(STATION_URL, params=params,
-                           timeout=aiohttp.ClientTimeout(total=15)) as r:
+    async with session.get(STATION_URL, params=params, timeout=_TIMEOUT) as r:
         text = await r.text()
-        if r.status != 200:
-            return []
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        return []
+        status = r.status
+    data = _check_status_and_parse(text, status)
+    _check_result_code(data)
     body = data.get("response", {}).get("body", {})
     items = body.get("items", [])
     if isinstance(items, dict):
@@ -38,18 +62,11 @@ async def fetch_realtime(session, api_key, station_name) -> dict[str, Any]:
     params = {"serviceKey": api_key, "returnType": "json", "numOfRows": "1",
               "pageNo": "1", "stationName": station_name, "dataTerm": "DAILY",
               "ver": "1.5"}
-    async with session.get(REALTIME_URL, params=params,
-                           timeout=aiohttp.ClientTimeout(total=15)) as r:
+    async with session.get(REALTIME_URL, params=params, timeout=_TIMEOUT) as r:
         text = await r.text()
-        if r.status != 200:
-            return {}
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        return {}
-    header = data.get("response", {}).get("header", {})
-    if header.get("resultCode") != "00":
-        return {}
+        status = r.status
+    data = _check_status_and_parse(text, status)
+    _check_result_code(data)
     items = data.get("response", {}).get("body", {}).get("items", [])
     if isinstance(items, dict):
         items = [items]
@@ -59,15 +76,11 @@ async def fetch_realtime(session, api_key, station_name) -> dict[str, Any]:
 async def fetch_forecast(session, api_key) -> list[dict]:
     params = {"serviceKey": api_key, "returnType": "json", "numOfRows": "10",
               "pageNo": "1", "searchDate": datetime.now(KST).strftime("%Y-%m-%d")}
-    async with session.get(FORECAST_URL, params=params,
-                           timeout=aiohttp.ClientTimeout(total=15)) as r:
+    async with session.get(FORECAST_URL, params=params, timeout=_TIMEOUT) as r:
         text = await r.text()
-        if r.status != 200:
-            return []
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        return []
+        status = r.status
+    data = _check_status_and_parse(text, status)
+    _check_result_code(data)
     items = data.get("response", {}).get("body", {}).get("items", [])
     if isinstance(items, dict):
         items = [items]
