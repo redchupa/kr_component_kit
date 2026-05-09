@@ -328,11 +328,23 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_disaster(self, user_input=None) -> FlowResult:
         from .disaster.api import validate_disaster_api
+        from .pharmacy.regions import PHARMACY_REGIONS
         errors: dict[str, str] = {}
         region_opts = [SelectOptionDict(value="", label="전체 (필터 없음)")]
         for name in ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종",
                       "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"]:
             region_opts.append(SelectOptionDict(value=name, label=name))
+        # 시군구 dropdown — flat list of all 시군구 names across the country.
+        # Replaces the prior free-text input which silently filtered out all
+        # alerts on a typo. User can also leave it blank to keep the 시도-only
+        # filter, or pick any specific 시군구 to narrow further.
+        sgg_opts = [SelectOptionDict(value="", label="시군구 미지정")]
+        seen: set[str] = set()
+        for sgg_list in PHARMACY_REGIONS.values():
+            for sgg in sgg_list:
+                if sgg not in seen:
+                    seen.add(sgg)
+                    sgg_opts.append(SelectOptionDict(value=sgg, label=sgg))
         if user_input is not None:
             api_key = user_input["api_key"]
             if await validate_disaster_api(api_key):
@@ -353,7 +365,9 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional("region_filter", default=""): SelectSelector(
                     SelectSelectorConfig(options=region_opts,
                                          mode=SelectSelectorMode.DROPDOWN)),
-                vol.Optional("sub_region", default=""): str,
+                vol.Optional("sub_region", default=""): SelectSelector(
+                    SelectSelectorConfig(options=sgg_opts,
+                                         mode=SelectSelectorMode.DROPDOWN)),
             }),
             errors=errors)
 
@@ -409,11 +423,26 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_kepco(self, user_input=None) -> FlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            return self.async_create_entry(
-                title=f"한전 ({user_input['username']})",
-                data={CONF_ENTRY_TYPE: ENTRY_KEPCO,
-                      "username": user_input["username"],
-                      "password": user_input["password"]})
+            from .kepco.api import KepcoApiClient
+            from .kepco.coordinator import KepcoCoordinator
+            username = user_input["username"]
+            password = user_input["password"]
+            try:
+                # Reuse the coordinator's session-init logic for the probe.
+                probe = KepcoCoordinator(self.hass, username, password)
+                logged_in = await probe.async_login()
+            except Exception as e:  # noqa: BLE001
+                _LOGGER.warning("KEPCO validation error: %s", e)
+                errors["base"] = "cannot_connect"
+            else:
+                if not logged_in:
+                    errors["base"] = "invalid_auth"
+                else:
+                    return self.async_create_entry(
+                        title=f"한전 ({username})",
+                        data={CONF_ENTRY_TYPE: ENTRY_KEPCO,
+                              "username": username,
+                              "password": password})
         return self.async_show_form(step_id="kepco", data_schema=vol.Schema({
             vol.Required("username"): str,
             vol.Required("password"): str,
@@ -424,12 +453,32 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_gasapp(self, user_input=None) -> FlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            return self.async_create_entry(
-                title=f"가스앱 ({user_input['contract_num']})",
-                data={CONF_ENTRY_TYPE: ENTRY_GASAPP,
-                      "token": user_input["token"],
-                      "member_id": user_input["member_id"],
-                      "contract_num": user_input["contract_num"]})
+            from .gasapp.api import GasAppApiClient
+            from .gasapp.exceptions import GasAppAuthError, GasAppConnectionError
+            session = async_get_clientsession(self.hass)
+            client = GasAppApiClient(session)
+            client.set_credentials(user_input["token"],
+                                    user_input["member_id"],
+                                    user_input["contract_num"])
+            try:
+                ok = await client.async_validate_credentials()
+            except GasAppAuthError:
+                errors["base"] = "invalid_auth"
+            except GasAppConnectionError:
+                errors["base"] = "cannot_connect"
+            except Exception as e:  # noqa: BLE001
+                _LOGGER.warning("GasApp validation error: %s", e)
+                errors["base"] = "cannot_connect"
+            else:
+                if not ok:
+                    errors["base"] = "invalid_auth"
+                else:
+                    return self.async_create_entry(
+                        title=f"가스앱 ({user_input['contract_num']})",
+                        data={CONF_ENTRY_TYPE: ENTRY_GASAPP,
+                              "token": user_input["token"],
+                              "member_id": user_input["member_id"],
+                              "contract_num": user_input["contract_num"]})
         return self.async_show_form(step_id="gasapp", data_schema=vol.Schema({
             vol.Required("token"): str,
             vol.Required("member_id"): str,
@@ -441,11 +490,31 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_arisu(self, user_input=None) -> FlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            return self.async_create_entry(
-                title=f"아리수 ({user_input['customer_number']})",
-                data={CONF_ENTRY_TYPE: ENTRY_ARISU,
-                      "customer_number": user_input["customer_number"],
-                      "customer_name": user_input["customer_name"]})
+            from .arisu.api import ArisuApiClient
+            from .arisu.exceptions import ArisuConnectionError, ArisuDataError
+            session = async_get_clientsession(self.hass)
+            client = ArisuApiClient(session)
+            try:
+                data = await client.async_get_water_bill_data(
+                    user_input["customer_number"], user_input["customer_name"])
+            except ArisuConnectionError:
+                errors["base"] = "cannot_connect"
+            except ArisuDataError:
+                errors["base"] = "invalid_auth"
+            except Exception as e:  # noqa: BLE001
+                _LOGGER.warning("Arisu validation error: %s", e)
+                errors["base"] = "cannot_connect"
+            else:
+                if not data.get("success", False):
+                    # No bill data for any of the recent months -> typically
+                    # a wrong customer number/name combination.
+                    errors["base"] = "invalid_auth"
+                else:
+                    return self.async_create_entry(
+                        title=f"아리수 ({user_input['customer_number']})",
+                        data={CONF_ENTRY_TYPE: ENTRY_ARISU,
+                              "customer_number": user_input["customer_number"],
+                              "customer_name": user_input["customer_name"]})
         return self.async_show_form(step_id="arisu", data_schema=vol.Schema({
             vol.Required("customer_number"): str,
             vol.Required("customer_name"): str,
@@ -561,12 +630,25 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_kma_weather(self, user_input=None) -> FlowResult:
         """Step 1: API key + 광역시도 선택."""
         from .kma_weather import SIDO_LIST
+        from .kma_weather.api import KMAApiError, fetch_vilage_forecast
         errors: dict[str, str] = {}
         if user_input is not None:
-            self._data = {CONF_ENTRY_TYPE: ENTRY_KMA_WEATHER,
-                          "api_key": user_input["api_key"]}
-            self._kma_sido = user_input["sido"]
-            return await self.async_step_kma_weather_sgg()
+            api_key = user_input["api_key"]
+            session = async_get_clientsession(self.hass)
+            try:
+                # Probe with Seoul (nx=60, ny=127) — known stable grid point.
+                await fetch_vilage_forecast(session, api_key, 60, 127)
+            except KMAApiError as e:
+                _LOGGER.warning("KMA validation failed: %s", e)
+                errors["base"] = "invalid_api_key"
+            except Exception as e:  # noqa: BLE001
+                _LOGGER.warning("KMA validation error: %s", e)
+                errors["base"] = "cannot_connect"
+            else:
+                self._data = {CONF_ENTRY_TYPE: ENTRY_KMA_WEATHER,
+                              "api_key": api_key}
+                self._kma_sido = user_input["sido"]
+                return await self.async_step_kma_weather_sgg()
         sido_opts = [SelectOptionDict(value=k, label=k) for k in SIDO_LIST.keys()]
         return self.async_show_form(step_id="kma_weather", data_schema=vol.Schema({
             vol.Required("api_key"): str,
