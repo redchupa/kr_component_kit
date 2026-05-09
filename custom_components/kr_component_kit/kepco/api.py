@@ -3,9 +3,16 @@ from __future__ import annotations
 import json
 import logging
 
-from .exceptions import KepcoAuthError
+from .exceptions import KepcoApiError, KepcoAuthError
 
 _LOGGER = logging.getLogger(__name__)
+
+# Markers in the post-login URL or body that signal an authenticated session.
+# We accept any of these so a cosmetic page rename on KEPCO's side doesn't
+# silently break login detection. As of 2026 the redirect lands on
+# `confirmInfo.do` (account confirmation) or `myInfo.do` (profile dashboard).
+_LOGIN_OK_URL_MARKERS = ("confirmInfo.do", "myInfo.do", "/main/main.do")
+_LOGIN_FAIL_BODY_MARKERS = ("로그인 실패", "비밀번호가 일치하지 않", "존재하지 않는 아이디")
 
 
 def _get_rsa_key():
@@ -70,22 +77,53 @@ class KepcoApiClient:
                 "https://pp.kepco.co.kr:8030/login",
                 data={"USER_ID": user_id, "USER_PW": user_pw},
                 headers=headers, allow_redirects=True)
-            if response.status_code == 200 and "confirmInfo.do" in str(response.url):
-                return True
-            return False
         except Exception as e:
-            _LOGGER.error("Login failed: %s", e)
+            _LOGGER.error("KEPCO login HTTP failed: %s", e)
             return False
+        if response.status_code != 200:
+            _LOGGER.warning("KEPCO login HTTP %s", response.status_code)
+            return False
+        url_str = str(response.url)
+        if any(marker in url_str for marker in _LOGIN_OK_URL_MARKERS):
+            return True
+        body = response.text or ""
+        for marker in _LOGIN_FAIL_BODY_MARKERS:
+            if marker in body:
+                _LOGGER.warning("KEPCO login rejected: %s", marker)
+                return False
+        # Unknown post-login state — log a snippet so we can update markers
+        # if KEPCO renames the redirect target.
+        _LOGGER.warning(
+            "KEPCO login: unknown redirect %s, body[:200]=%s",
+            url_str, body[:200].strip(),
+        )
+        return False
 
     async def _request(self, method, url, **kwargs):
+        """Issue a request, retrying once with re-login on auth-shaped failures.
+
+        We **only** retry on JSON-decode failures (typical KEPCO behaviour for
+        an expired session — the gateway returns the login HTML with status
+        200), not on every exception. Network errors and HTTP errors must
+        propagate so transient outages aren't mistaken for bad credentials,
+        which would otherwise hammer the login endpoint and risk lockout.
+        """
+        response = await self._session.request(method, url, **kwargs)
         try:
-            response = await self._session.request(method, url, **kwargs)
             return json.loads(response.text)
-        except Exception:
-            if await self.async_login(self._username, self._password):
-                response = await self._session.request(method, url, **kwargs)
+        except (json.JSONDecodeError, ValueError):
+            # Likely the session expired and we got an HTML page back.
+            _LOGGER.debug("KEPCO request %s returned non-JSON; re-login + retry", url)
+            if not await self.async_login(self._username, self._password):
+                raise KepcoAuthError("Re-login failed during retry")
+            response = await self._session.request(method, url, **kwargs)
+            try:
                 return json.loads(response.text)
-            raise
+            except (json.JSONDecodeError, ValueError) as e:
+                snippet = (response.text or "")[:200].strip()
+                raise KepcoApiError(
+                    f"KEPCO 응답이 JSON이 아닙니다 (재로그인 후): {snippet}"
+                ) from e
 
     async def async_get_recent_usage(self):
         return await self._request("POST", "https://pp.kepco.co.kr:8030/low/main/recent_usage.do", json={})
