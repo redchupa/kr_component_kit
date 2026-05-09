@@ -106,14 +106,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         store = {"coordinators": coordinators, "regions": regions}
 
     elif etype == ENTRY_KEPCO:
+        from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
         from .kepco.coordinator import KepcoCoordinator
+        from .kepco.exceptions import KepcoAuthError
         c = KepcoCoordinator(hass, entry.data["username"], entry.data["password"])
         try:
             await c.async_login()
-        except Exception as e:
-            # Don't block setup — coordinator's first refresh will surface
-            # the failure as UpdateFailed, but log it so the user sees why.
-            LOGGER.warning("KEPCO login failed during setup: %s", e)
+        except KepcoAuthError as e:
+            raise ConfigEntryAuthFailed(f"KEPCO 로그인 실패: {e}") from e
+        except Exception as e:  # noqa: BLE001
+            raise ConfigEntryNotReady(f"KEPCO 연결 실패: {e}") from e
         await c.async_config_entry_first_refresh()
         store = {"coordinator": c}
 
