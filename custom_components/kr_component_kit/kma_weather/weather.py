@@ -6,7 +6,7 @@ from homeassistant.components.weather import (
 )
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from ..const import DOMAIN
+from ..const import DOMAIN, DONATION_MANUFACTURER, DONATION_MODEL, DONATION_SW_VERSION
 
 CONDITION_MAP = {
     "sunny": "sunny", "partlycloudy": "partlycloudy", "cloudy": "cloudy",
@@ -32,7 +32,9 @@ class KMAWeather(CoordinatorEntity, WeatherEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"weather_{region_name}")},
             name=f"기상청 날씨예보 - {region_name}",
-            manufacturer="기상청", model="동네예보",
+            manufacturer=DONATION_MANUFACTURER,
+            model=DONATION_MODEL,
+            sw_version=DONATION_SW_VERSION,
             entry_type=DeviceEntryType.SERVICE)
 
     def _data(self) -> dict[str, Any]:

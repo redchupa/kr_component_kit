@@ -2,13 +2,16 @@
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from ..const import DOMAIN
+from ..const import DOMAIN, DONATION_MANUFACTURER, DONATION_MODEL, DONATION_SW_VERSION
 from ..utils import get_value_from_path
 
 def gasapp_device(contract_num):
     return DeviceInfo(identifiers={(DOMAIN, f"gasapp_{contract_num}")},
-                      name=f"가스앱 ({contract_num})", manufacturer="한국가스공사",
-                      model="가스앱", entry_type=DeviceEntryType.SERVICE)
+                      name=f"가스앱 ({contract_num})",
+                      manufacturer=DONATION_MANUFACTURER,
+                      model=DONATION_MODEL,
+                      sw_version=DONATION_SW_VERSION,
+                      entry_type=DeviceEntryType.SERVICE)
 
 class GasAppSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True

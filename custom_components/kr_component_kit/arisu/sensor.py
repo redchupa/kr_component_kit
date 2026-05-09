@@ -2,12 +2,15 @@
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from ..const import DOMAIN
+from ..const import DOMAIN, DONATION_MANUFACTURER, DONATION_MODEL, DONATION_SW_VERSION
 
 def arisu_device(customer_number):
     return DeviceInfo(identifiers={(DOMAIN, f"arisu_{customer_number}")},
-                      name=f"아리수 ({customer_number})", manufacturer="서울시",
-                      model="아리수 상수도", entry_type=DeviceEntryType.SERVICE)
+                      name=f"아리수 ({customer_number})",
+                      manufacturer=DONATION_MANUFACTURER,
+                      model=DONATION_MODEL,
+                      sw_version=DONATION_SW_VERSION,
+                      entry_type=DeviceEntryType.SERVICE)
 
 class ArisuSensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True

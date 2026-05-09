@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .api import ArisuApiClient
 from .exceptions import ArisuAuthError, ArisuConnectionError, ArisuDataError
-from ..const import DOMAIN
+from ..const import DOMAIN, DONATION_MANUFACTURER, DONATION_MODEL, DONATION_SW_VERSION
 import logging
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,8 +53,9 @@ class ArisuDevice:
         return DeviceInfo(
             identifiers={(DOMAIN, self._unique_id)},
             name=self._name,
-            manufacturer="서울시",
-            model="아리수 상수도 고객센터",
+            manufacturer=DONATION_MANUFACTURER,
+            model=DONATION_MODEL,
+            sw_version=DONATION_SW_VERSION,
             configuration_url="https://i121.seoul.go.kr",
         )
 

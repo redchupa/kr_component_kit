@@ -10,14 +10,16 @@ from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.core import callback
-from ..const import DOMAIN
+from ..const import DOMAIN, DONATION_MANUFACTURER, DONATION_MODEL, DONATION_SW_VERSION
 
 KST = ZoneInfo("Asia/Seoul")
 
 def air_device(station_name):
     return DeviceInfo(identifiers={(DOMAIN, f"air_{station_name}")},
                       name=f"에어코리아 - {station_name}",
-                      manufacturer="한국환경공단", model="에어코리아",
+                      manufacturer=DONATION_MANUFACTURER,
+                      model=DONATION_MODEL,
+                      sw_version=DONATION_SW_VERSION,
                       entry_type=DeviceEntryType.SERVICE)
 
 POLLUTANTS = [

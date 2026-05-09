@@ -1,6 +1,6 @@
 """Weather device helpers."""
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-from ..const import DOMAIN
+from ..const import DOMAIN, DONATION_MANUFACTURER, DONATION_MODEL, DONATION_SW_VERSION
 from . import AREA_CODES
 
 def weather_device(area_code: str) -> DeviceInfo:
@@ -8,6 +8,8 @@ def weather_device(area_code: str) -> DeviceInfo:
     return DeviceInfo(
         identifiers={(DOMAIN, f"weather_{area_code}")},
         name=f"기상특보 - {name}",
-        manufacturer="기상청", model="기상특보 서비스",
+        manufacturer=DONATION_MANUFACTURER,
+        model=DONATION_MODEL,
+        sw_version=DONATION_SW_VERSION,
         entry_type=DeviceEntryType.SERVICE,
     )

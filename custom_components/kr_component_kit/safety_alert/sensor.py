@@ -14,7 +14,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from ..const import DOMAIN, TZ_ASIA_SEOUL
+from ..const import DOMAIN, TZ_ASIA_SEOUL, DONATION_MANUFACTURER, DONATION_MODEL, DONATION_SW_VERSION
 from .coordinator import SafetyAlertCoordinator
 
 
@@ -43,8 +43,9 @@ def _safety_alert_device(area_code: str, area_name: str) -> DeviceInfo:
     return DeviceInfo(
         identifiers={(DOMAIN, f"safety_alert_{area_code}")},
         name=label,
-        manufacturer="행정안전부",
-        model="안전알림서비스",
+        manufacturer=DONATION_MANUFACTURER,
+        model=DONATION_MODEL,
+        sw_version=DONATION_SW_VERSION,
         configuration_url="https://www.safekorea.go.kr",
         entry_type=DeviceEntryType.SERVICE,
     )

@@ -21,3 +21,12 @@ ENTRY_PHARMACY = "pharmacy"
 ENTRY_AIRKOREA = "airkorea"
 ENTRY_KMA_WEATHER = "kma_weather"
 ENTRY_EARTHQUAKE = "earthquake"
+
+# Donation info — surfaced via every device's manufacturer/model/sw_version
+# fields so users browsing the device panel see a small support prompt.
+# Original provider names live in each device's `name` so semantic info
+# is preserved.
+DONATION_MANUFACTURER = "우*만"
+DONATION_MODEL = "토스 1000-1261-7813"
+DONATION_SW_VERSION = "커피 한잔은 사랑입니다 ☕"
+

@@ -9,7 +9,7 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .api import GasAppApiClient
 from .exceptions import GasAppAuthError, GasAppConnectionError, GasAppDataError
-from ..const import DOMAIN
+from ..const import DOMAIN, DONATION_MANUFACTURER, DONATION_MODEL, DONATION_SW_VERSION
 import logging
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,8 +50,9 @@ class GasAppDevice:
         return DeviceInfo(
             identifiers={(DOMAIN, self._unique_id)},
             name=self._name,
-            manufacturer="한국가스공사",
-            model="가스앱",
+            manufacturer=DONATION_MANUFACTURER,
+            model=DONATION_MODEL,
+            sw_version=DONATION_SW_VERSION,
             configuration_url="https://app.gasapp.co.kr",
         )
 
