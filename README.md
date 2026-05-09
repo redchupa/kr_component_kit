@@ -121,6 +121,105 @@ Installation and configuration details are in the Korean sections below.
 
 ---
 
+## 🎨 대시보드 예제
+
+각 sensor가 노출하는 attribute를 활용하면 깔끔한 카드를 만들 수 있습니다. 아래 예제는 모두 **추가 HACS 카드 없이** Home Assistant 기본 카드(`tile`, `markdown`, `entities`)만으로 동작합니다.
+
+### 💊 약국 — 가까운 순 + 영업중 필터 + 카카오맵 길찾기
+
+`sensor.약국_<지역>_운영_약국_수`의 `pharmacies` attribute를 활용. 검색·필터를 위해 헬퍼 두 개를 먼저 만들어주세요:
+
+- **설정 → 헬퍼 → 텍스트** : `input_text.yaggug_geomsaeg` (이름: "약국 검색")
+- **설정 → 헬퍼 → 토글** : `input_boolean.yaggug_yeongeobjungman` (이름: "약국 영업중만")
+
+대시보드 YAML(섹션 또는 vertical-stack에 통째로 붙여넣기):
+
+```yaml
+type: vertical-stack
+cards:
+  - type: heading
+    heading: 💊 운영 약국
+    heading_style: title
+    icon: mdi:pharmacy
+
+  - type: horizontal-stack
+    cards:
+      - type: tile
+        entity: sensor.yaggug_siheungsi_unyeong_yaggug_su  # 본인 entity_id 로 변경
+        name: 전체 약국
+        icon: mdi:pharmacy-marker
+        color: green
+      - type: tile
+        entity: sensor.yaggug_siheungsi_unyeong_yaggug_su
+        name: 지금 영업 중
+        icon: mdi:clock-check
+        color: blue
+        state_content: open_now_count
+
+  - type: entities
+    title: 검색 / 필터
+    show_header_toggle: false
+    entities:
+      - entity: input_text.yaggug_geomsaeg
+        name: 🔍 이름 검색
+      - entity: input_boolean.yaggug_yeongeobjungman
+        name: 🟢 지금 영업 중만
+
+  - type: markdown
+    title: 약국 목록 (가까운 순)
+    content: |
+      {# 위치 기준 entity — zone.home / person.xxx / device_tracker.xxx 로 변경 가능 #}
+      {% set tracker = 'zone.home' %}
+      {% set sensor_id = 'sensor.yaggug_siheungsi_unyeong_yaggug_su' %}
+      {% set my_lat = state_attr(tracker, 'latitude') | float(0) %}
+      {% set my_lon = state_attr(tracker, 'longitude') | float(0) %}
+      {% set ph = state_attr(sensor_id, 'pharmacies') or [] %}
+      {% set query = states('input_text.yaggug_geomsaeg') | lower | trim %}
+      {% set open_only = is_state('input_boolean.yaggug_yeongeobjungman', 'on') %}
+      {% set step1 = ph if not query else ph | selectattr('name', 'search', query) | list %}
+      {% set filtered = step1 | selectattr('open_now') | list if open_only else step1 %}
+      {% set ns = namespace(items=[]) %}
+      {% for p in filtered %}
+        {% set d = distance(my_lat, my_lon, p.lat | float(0), p.lon | float(0)) %}
+        {% set ns.items = ns.items + [(d, p)] %}
+      {% endfor %}
+      {% set ranked = ns.items | sort %}
+      **표시 {{ ranked | length }}곳** · 기준 `{{ tracker }}`
+      {% if query %}· 검색 `{{ query }}`{% endif %}{% if open_only %}· 영업중만{% endif %}
+
+      ---
+      {% for d, p in ranked[:15] %}
+      {% set dist_label = ((d * 1000) | round(0) | int | string) + 'm' if d < 1 else ((d | round(1) | string) + 'km') %}
+      ### {{ '🟢' if p.open_now else '⚪' }} {{ p.name }} · _{{ dist_label }}_
+      - 📍 {{ p.address }}
+      - 📞 [{{ p.phone or '번호 없음' }}](tel:{{ (p.phone or '') | replace('-','') }})
+      - 🕐 {{ ('지금 영업 중 (' + p.today_hours + ')') if p.open_now else (('오늘 ' + p.today_hours) if p.today_hours else '오늘 휴무') }}
+      - 🗺️ [카카오맵](https://map.kakao.com/link/map/{{ p.name | urlencode }},{{ p.lat }},{{ p.lon }}) · [길찾기](https://map.kakao.com/link/to/{{ p.name | urlencode }},{{ p.lat }},{{ p.lon }})
+
+      {% endfor %}
+```
+
+**팁:**
+- 위치 기준을 폰 따라가게 하려면 `tracker = 'zone.home'`을 `tracker = 'person.<본인>'` 또는 `tracker = 'device_tracker.<폰>'`로 변경.
+- 카카오맵 딥링크는 PC/모바일 모두 작동, API 키 불필요.
+- `open_now`는 sensor 갱신과 별개로 markdown이 렌더될 때마다 재계산됩니다 (분 단위는 아니지만 시간 단위로는 충분).
+
+### 사용 가능한 sensor attribute 요약
+
+| 통합 | sensor | 주요 attribute |
+|---|---|---|
+| 약국 | `sensor.<지역>_운영_약국_수` | `pharmacies[]` (name/address/phone/lat/lon/duty_time/today_hours/`open_now`), `total`, `open_now_count` |
+| 기상특보 | `binary_sensor.<지역>_<특보>` | `event_type`, `start_time`, `end_time`, `warn_stress` |
+| 에어코리아 | `sensor.<측정소>_<오염물질>` | 시계열 `pm10`/`pm25`/`o3`/`no2`/`so2`/`co` |
+| 유가 | `sensor.<지역>_<유종>_평균가` | `low_price_stations[]`, 시도별 평균/최저 |
+| 학교 | `sensor.<학교>_급식` | 오늘/내일 메뉴, 알레르기 정보 |
+| 재난문자 | `sensor.<지역>_재난문자` | 최근 메시지 + count |
+| 지진 | `event.<위치>_지진` | 진도/위도/경도/거리 |
+
+각 sensor의 정확한 attribute는 **개발자 도구 → 상태**에서 entity 검색하시면 확인 가능합니다.
+
+---
+
 ## 🔄 업데이트 주기
 
 | 서비스 | 업데이트 주기 | 비고 |
@@ -180,11 +279,11 @@ Installation and configuration details are in the Korean sections below.
   <tr>
     <td align="center">
       <b>토스</b><br/>
-      <img src="images/toss-donation.png" alt="Toss 후원 QR" width="200"/>
+      <img src="https://raw.githubusercontent.com/redchupa/kr_component_kit/main/images/toss-donation.png" alt="Toss 후원 QR" width="200"/>
     </td>
     <td align="center">
       <b>PayPal</b><br/>
-      <img src="images/paypal-donation.png" alt="PayPal 후원 QR" width="200"/>
+      <img src="https://raw.githubusercontent.com/redchupa/kr_component_kit/main/images/paypal-donation.png" alt="PayPal 후원 QR" width="200"/>
     </td>
   </tr>
 </table>
