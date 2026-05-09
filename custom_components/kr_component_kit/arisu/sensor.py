@@ -25,7 +25,7 @@ class ArisuSensor(CoordinatorEntity, SensorEntity):
     def native_value(self):
         data = self.coordinator.data or {}
         if self._key == "total_amount":
-            return data.get("total_amount", 0)
+            return data.get("total_amount")
         elif self._key == "current_usage":
             return data.get("usage_info", {}).get("current_usage")
         elif self._key == "billing_month":

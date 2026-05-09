@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from typing import Any
 import aiohttp
+from ..const import TZ_ASIA_SEOUL
 from . import (KMA_API_BASE, EVENT_TYPE_ADVISORY, EVENT_TYPE_CANCELLED,
                EVENT_TYPE_NONE, EVENT_TYPE_PRE_ADVISORY, EVENT_TYPE_PRE_WARNING,
                EVENT_TYPE_WARNING)
@@ -11,10 +12,12 @@ from . import (KMA_API_BASE, EVENT_TYPE_ADVISORY, EVENT_TYPE_CANCELLED,
 _LOGGER = logging.getLogger(__name__)
 
 def _parse_dt(s: str) -> datetime | None:
+    """KMA emits Seoul-local times; attach KST tzinfo so downstream
+    `dt_util.as_local` / ISO-format comparisons stay correct."""
     if not s:
         return None
     try:
-        return datetime.strptime(str(s), "%Y%m%d%H%M")
+        return datetime.strptime(str(s), "%Y%m%d%H%M").replace(tzinfo=TZ_ASIA_SEOUL)
     except (ValueError, TypeError):
         return None
 
@@ -25,7 +28,7 @@ def _determine_type(item: dict[str, Any]) -> str:
         return EVENT_TYPE_CANCELLED
     ws = item.get("warnStress", 1)
     st = _parse_dt(item.get("startTime", ""))
-    if st and st <= datetime.now():
+    if st and st <= datetime.now(TZ_ASIA_SEOUL):
         return EVENT_TYPE_ADVISORY if ws == 0 else EVENT_TYPE_WARNING
     return EVENT_TYPE_PRE_ADVISORY if ws == 0 else EVENT_TYPE_PRE_WARNING
 

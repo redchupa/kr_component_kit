@@ -110,8 +110,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         c = KepcoCoordinator(hass, entry.data["username"], entry.data["password"])
         try:
             await c.async_login()
-        except Exception:
-            pass
+        except Exception as e:
+            # Don't block setup — coordinator's first refresh will surface
+            # the failure as UpdateFailed, but log it so the user sees why.
+            LOGGER.warning("KEPCO login failed during setup: %s", e)
         await c.async_config_entry_first_refresh()
         store = {"coordinator": c}
 
@@ -184,7 +186,7 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    etype = entry.data.get(CONF_ENTRY_TYPE)
+    etype = entry.data.get(CONF_ENTRY_TYPE) or entry.data.get("service")
     store = hass.data.get(DOMAIN, {}).get(entry.entry_id, {}) or {}
     async_cleanup_llm_api(store.get("unregister_llm"))
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORM_MAP.get(etype, [])):

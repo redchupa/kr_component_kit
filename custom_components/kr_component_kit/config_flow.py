@@ -454,6 +454,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ══════════ 약국 ══════════
 
     async def async_step_pharmacy(self, user_input=None) -> FlowResult:
+        from .pharmacy.api import PharmacyApiError, fetch_pharmacies
         errors: dict[str, str] = {}
         sido_opts = {
             "서울특별시": "서울특별시", "부산광역시": "부산광역시",
@@ -467,12 +468,22 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             "제주특별자치도": "제주특별자치도",
         }
         if user_input is not None:
-            return self.async_create_entry(
-                title="약국 정보",
-                data={CONF_ENTRY_TYPE: ENTRY_PHARMACY,
-                      "api_key": user_input["api_key"],
-                      "q0": user_input["q0"],
-                      "q1": user_input.get("q1", "")})
+            api_key = user_input["api_key"].strip()
+            q0 = user_input["q0"]
+            q1 = user_input.get("q1", "").strip()
+            try:
+                await fetch_pharmacies(api_key, q0, q1, num=1)
+            except PharmacyApiError as e:
+                _LOGGER.warning("Pharmacy validation failed: %s", e)
+                errors["base"] = "invalid_api_key"
+            except Exception as e:  # noqa: BLE001
+                _LOGGER.warning("Pharmacy validation error: %s", e)
+                errors["base"] = "cannot_connect"
+            else:
+                return self.async_create_entry(
+                    title="약국 정보",
+                    data={CONF_ENTRY_TYPE: ENTRY_PHARMACY,
+                          "api_key": api_key, "q0": q0, "q1": q1})
         return self.async_show_form(
             step_id="pharmacy",
             data_schema=vol.Schema({
