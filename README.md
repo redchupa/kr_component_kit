@@ -279,11 +279,11 @@ cards:
   <tr>
     <td align="center">
       <b>토스</b><br/>
-      <img src="images/toss-donation.png" alt="Toss 후원 QR" width="200"/>
+      <img src="https://raw.githubusercontent.com/redchupa/kr_component_kit/main/images/toss-donation.png" alt="Toss 후원 QR" width="200"/>
     </td>
     <td align="center">
       <b>PayPal</b><br/>
-      <img src="images/paypal-donation.png" alt="PayPal 후원 QR" width="200"/>
+      <img src="https://raw.githubusercontent.com/redchupa/kr_component_kit/main/images/paypal-donation.png" alt="PayPal 후원 QR" width="200"/>
     </td>
   </tr>
 </table>
