@@ -1,6 +1,7 @@
 # 🇰🇷 KR Component Kit
 
 > 대한민국에서만 사용할 수 있는 Home Assistant 통합 구성요소
+> Home Assistant integration for Korea-only services (KEPCO, 아리수, 안전알림, 가스앱, 카카오맵, 굿스플로우)
 
 [![hacs][hacsbadge]][hacs]
 [![GitHub Release][releases-shield]][releases]
@@ -8,6 +9,28 @@
 [![License][license-shield]](LICENSE)
 
 한국전력, 아리수, 안전알림서비스 등 대한민국에서만 사용할 수 있는 다양한 서비스를 Home Assistant에서 모니터링할 수 있게 해주는 통합 구성요소입니다.
+
+<details>
+<summary><b>🇬🇧 English summary (click to expand)</b></summary>
+
+A Home Assistant custom integration that exposes Korea-only services as sensors.
+
+**Supported services**
+
+| Service | What it does |
+|---|---|
+| ⚡ **KEPCO** (한국전력) | Real-time electricity usage, bill estimate, progressive-tier indicator |
+| 💧 **Arisu** (서울시 상수도) | Seoul tap-water bill and usage |
+| 🚨 **Disaster Alert** (안전알림서비스) | Korean government emergency alerts, filtered by 시도/시군구/읍면동 |
+| 🚛 **GoodsFlow** (굿스플로우) | Korean parcel tracking across multiple carriers |
+| 🏠 **GasApp** (가스앱) | Monthly city-gas usage and bill |
+| 🗺️ **KakaoMap** (카카오맵) | Real-time travel time between two coordinates |
+
+Aimed at Korean residents (and Korean-expats) who want to monitor utilities, deliveries, and disaster alerts inside Home Assistant. Most providers do not publish official APIs, so this integration uses authenticated web scraping — see the Disclaimer section.
+
+Installation and configuration details are in the Korean sections below.
+
+</details>
 
 ---
 

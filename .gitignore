@@ -10,3 +10,8 @@ __pycache__/
 .DS_Store
 Thumbs.db
 .claude/
+
+# Promotion / submission draft files (local only)
+HACS_SUBMISSION.md
+REDDIT_POST.md
+PROMO_DRAFTS.md
