@@ -19,6 +19,31 @@ def _today_hours(duty_time: dict[str, str]) -> str | None:
     return duty_time.get(today) or duty_time.get("공휴일")
 
 
+def _is_open_now(duty_time: dict[str, str], now: datetime) -> bool:
+    """Return True if current KST time falls inside today's duty window.
+
+    Duty hours format from data.go.kr is "HHMM~HHMM" (e.g. "0900~2200").
+    Closing < opening means an overnight shift (e.g. "2200~0600").
+    """
+    spec = duty_time.get(_DAY_NAMES_KO[now.weekday()]) or duty_time.get("공휴일")
+    if not spec or "~" not in spec:
+        return False
+    try:
+        start_str, close_str = (s.strip() for s in spec.split("~", 1))
+        if len(start_str) != 4 or len(close_str) != 4:
+            return False
+        start_min = int(start_str[:2]) * 60 + int(start_str[2:])
+        close_min = int(close_str[:2]) * 60 + int(close_str[2:])
+    except ValueError:
+        return False
+    cur = now.hour * 60 + now.minute
+    if close_min <= start_min:
+        # overnight window — current time is within the window if it's
+        # past the start OR before the close on the wrap-around side
+        return cur >= start_min or cur <= close_min
+    return start_min <= cur <= close_min
+
+
 class PharmacySensor(CoordinatorEntity, SensorEntity):
     _attr_has_entity_name = True
     _attr_icon = "mdi:pharmacy"
@@ -43,6 +68,10 @@ class PharmacySensor(CoordinatorEntity, SensorEntity):
         data = self.coordinator.data or []
         # Sort by name for stable rendering, then truncate.
         sorted_data = sorted(data, key=lambda p: p.get("name") or "")
+        # Property is read on each state access, so `now` reflects the
+        # request time — open_now stays roughly fresh between coordinator
+        # refreshes (sufficient for hour-level pharmacy schedules).
+        now = datetime.now(TZ_ASIA_SEOUL)
         pharmacies: list[dict[str, Any]] = []
         for ph in sorted_data[:_MAX_ATTR_PHARMACIES]:
             duty = ph.get("duty_time") or {}
@@ -51,6 +80,7 @@ class PharmacySensor(CoordinatorEntity, SensorEntity):
                 "address": ph.get("address") or "",
                 "phone": ph.get("phone") or "",
                 "today_hours": _today_hours(duty) or "",
+                "open_now": _is_open_now(duty, now),
                 "duty_time": duty,
                 "lat": ph.get("lat") or "",
                 "lon": ph.get("lon") or "",
@@ -59,4 +89,5 @@ class PharmacySensor(CoordinatorEntity, SensorEntity):
             "pharmacies": pharmacies,
             "total": len(data),
             "shown": len(pharmacies),
+            "open_now_count": sum(1 for p in pharmacies if p["open_now"]),
         }
