@@ -1,10 +1,11 @@
 {
   "domain": "kr_component_kit",
   "name": "한국 컴포넌트 키트",
-  "codeowners": [],
+  "codeowners": ["@redchupa"],
   "config_flow": true,
   "dependencies": ["conversation"],
-  "documentation": "",
+  "documentation": "https://github.com/redchupa/kr_component_kit",
+  "issue_tracker": "https://github.com/redchupa/kr_component_kit/issues",
   "iot_class": "cloud_polling",
   "requirements": ["curl_cffi>=0.7.0", "beautifulsoup4>=4.12.0"],
   "version": "4.2.9"
