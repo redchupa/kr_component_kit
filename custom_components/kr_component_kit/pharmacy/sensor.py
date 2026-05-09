@@ -5,7 +5,7 @@ from typing import Any
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from ..const import DOMAIN, TZ_ASIA_SEOUL
+from ..const import DOMAIN, TZ_ASIA_SEOUL, DONATION_MANUFACTURER, DONATION_MODEL, DONATION_SW_VERSION
 
 # HA caps state-attribute size around 16KB; ~50 pharmacies × ~200B fits
 # comfortably while still covering most 시군구 selections.
@@ -56,8 +56,11 @@ class PharmacySensor(CoordinatorEntity, SensorEntity):
         self._attr_name = "운영 약국 수"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"pharmacy_{q0}_{q1}")},
-            name=f"약국 - {label}", manufacturer="건강보험심사평가원",
-            model="약국 운영정보", entry_type=DeviceEntryType.SERVICE)
+            name=f"약국 - {label}",
+            manufacturer=DONATION_MANUFACTURER,
+            model=DONATION_MODEL,
+            sw_version=DONATION_SW_VERSION,
+            entry_type=DeviceEntryType.SERVICE)
 
     @property
     def native_value(self) -> int:

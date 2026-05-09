@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .api import SafetyAlertApiClient
 from .exceptions import SafetyAlertConnectionError, SafetyAlertDataError
-from ..const import DOMAIN, LOGGER, TZ_ASIA_SEOUL
+from ..const import DOMAIN, LOGGER, TZ_ASIA_SEOUL, DONATION_MANUFACTURER, DONATION_MODEL, DONATION_SW_VERSION
 
 
 class SafetyAlertDevice:
@@ -60,8 +60,9 @@ class SafetyAlertDevice:
         return DeviceInfo(
             identifiers={(DOMAIN, self._unique_id)},
             name=self._name,
-            manufacturer="행정안전부",
-            model="안전알림서비스",
+            manufacturer=DONATION_MANUFACTURER,
+            model=DONATION_MODEL,
+            sw_version=DONATION_SW_VERSION,
             configuration_url="https://www.safekorea.go.kr",
         )
 
