@@ -174,7 +174,9 @@ cards:
       {% set my_lat = state_attr(tracker, 'latitude') | float(0) %}
       {% set my_lon = state_attr(tracker, 'longitude') | float(0) %}
       {% set ph = state_attr(sensor_id, 'pharmacies') or [] %}
-      {% set query = states('input_text.yaggug_geomsaeg') | lower | trim %}
+      {# input_text 의 빈 상태가 'unknown' 으로 들어오는 경우가 있어 정규화 #}
+      {% set raw_query = states('input_text.yaggug_geomsaeg') | default('', true) %}
+      {% set query = '' if raw_query in ['unknown', 'unavailable', 'none', None] else raw_query | lower | trim %}
       {% set open_only = is_state('input_boolean.yaggug_yeongeobjungman', 'on') %}
       {% set step1 = ph if not query else ph | selectattr('name', 'search', query) | list %}
       {% set filtered = step1 | selectattr('open_now') | list if open_only else step1 %}
