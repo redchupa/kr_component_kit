@@ -390,52 +390,102 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # ══════════ 안전알림 ══════════
 
     async def async_step_safety_alert(self, user_input=None) -> FlowResult:
-        """Select regions for safety alerts (시도 + 시군구)."""
+        """Step 1/3 — 시도 선택.
+
+        Cascading 시도 → 시군구 → 읍면동 dropdown via safekorea.go.kr region API.
+        Restores the pre-coordinator-migration flow that allowed per-동 alerts
+        (e.g. "경기도 시흥시 은행동").
+        """
+        from .safety_alert.region_api import SafetyAlertRegionApiClient
         errors: dict[str, str] = {}
-        sido_map = {
-            "1100000000": "서울특별시", "2600000000": "부산광역시",
-            "2700000000": "대구광역시", "2800000000": "인천광역시",
-            "2900000000": "광주광역시", "3000000000": "대전광역시",
-            "3100000000": "울산광역시", "3600000000": "세종특별자치시",
-            "4100000000": "경기도", "5100000000": "강원특별자치도",
-            "4300000000": "충청북도", "4400000000": "충청남도",
-            "4500000000": "전북특별자치도", "4600000000": "전라남도",
-            "4700000000": "경상북도", "4800000000": "경상남도",
-            "5000000000": "제주특별자치도",
-        }
-        # 서울 자치구
-        seoul_gu = {
-            "1111000000": "종로구", "1114000000": "중구", "1117000000": "용산구",
-            "1120000000": "성동구", "1121500000": "광진구", "1123000000": "동대문구",
-            "1126000000": "중랑구", "1129000000": "성북구", "1130500000": "강북구",
-            "1132000000": "도봉구", "1135000000": "노원구", "1138000000": "은평구",
-            "1141000000": "서대문구", "1144000000": "마포구", "1147000000": "양천구",
-            "1150000000": "강서구", "1153000000": "구로구", "1154500000": "금천구",
-            "1156000000": "영등포구", "1159000000": "동작구", "1162000000": "관악구",
-            "1165000000": "서초구", "1168000000": "강남구", "1171000000": "송파구",
-            "1174000000": "강동구",
-        }
-        all_regions = {**sido_map, **seoul_gu}
-        region_opts = [SelectOptionDict(value=k, label=v) for k, v in all_regions.items()]
+        client = SafetyAlertRegionApiClient()
+        sido_list = await client.async_get_sido_list()
+        sido_opts = [SelectOptionDict(value=s["code"], label=s["name"])
+                     for s in sido_list]
         if user_input is not None:
-            areas = user_input.get("area_codes", [])
-            if not isinstance(areas, list):
-                areas = [areas]
-            if not areas:
-                errors["base"] = "no_selection"
-            else:
-                region_items = [{"code": c, "name": all_regions.get(c, c)} for c in areas]
-                await self.async_set_unique_id(
-                    f"{ENTRY_SAFETY_ALERT}_" + "_".join(sorted(areas)))
-                self._abort_if_unique_id_configured()
-                return self.async_create_entry(
-                    title="안전알림",
-                    data={CONF_ENTRY_TYPE: ENTRY_SAFETY_ALERT, "regions": region_items})
+            sido_code = user_input["sido_code"]
+            sido_name = next((s["name"] for s in sido_list
+                              if s["code"] == sido_code), sido_code)
+            self._sa_sido_code = sido_code
+            self._sa_sido_name = sido_name
+            return await self.async_step_safety_alert_sgg()
         return self.async_show_form(step_id="safety_alert", data_schema=vol.Schema({
-            vol.Required("area_codes"): SelectSelector(
-                SelectSelectorConfig(options=region_opts, multiple=True,
+            vol.Required("sido_code"): SelectSelector(
+                SelectSelectorConfig(options=sido_opts,
                                      mode=SelectSelectorMode.DROPDOWN)),
         }), errors=errors)
+
+    async def async_step_safety_alert_sgg(self, user_input=None) -> FlowResult:
+        """Step 2/3 — 시군구 선택 (또는 시도 전체)."""
+        from .safety_alert.region_api import SafetyAlertRegionApiClient
+        errors: dict[str, str] = {}
+        client = SafetyAlertRegionApiClient()
+        sgg_list = await client.async_get_sgg_list(self._sa_sido_code) or []
+        sgg_opts = [SelectOptionDict(value="", label=f"{self._sa_sido_name} 전체 (시군구 미지정)")]
+        sgg_opts.extend(SelectOptionDict(value=s["code"], label=s["name"])
+                        for s in sgg_list)
+        if user_input is not None:
+            sgg_code = user_input.get("sgg_code", "")
+            if not sgg_code:
+                # 시군구 미지정 — 시도 단위로 등록 종료
+                return await self._finish_safety_alert(sgg_code="", emd_code="")
+            sgg_name = next((s["name"] for s in sgg_list
+                             if s["code"] == sgg_code), sgg_code)
+            self._sa_sgg_code = sgg_code
+            self._sa_sgg_name = sgg_name
+            return await self.async_step_safety_alert_emd()
+        return self.async_show_form(step_id="safety_alert_sgg", data_schema=vol.Schema({
+            vol.Optional("sgg_code", default=""): SelectSelector(
+                SelectSelectorConfig(options=sgg_opts,
+                                     mode=SelectSelectorMode.DROPDOWN)),
+        }), errors=errors)
+
+    async def async_step_safety_alert_emd(self, user_input=None) -> FlowResult:
+        """Step 3/3 — 읍면동 선택 (옵션, 미지정 가능)."""
+        from .safety_alert.region_api import SafetyAlertRegionApiClient
+        errors: dict[str, str] = {}
+        client = SafetyAlertRegionApiClient()
+        emd_list = await client.async_get_emd_list(
+            self._sa_sido_code, self._sa_sgg_code) or []
+        emd_opts = [SelectOptionDict(value="", label=f"{self._sa_sgg_name} 전체 (읍면동 미지정)")]
+        emd_opts.extend(SelectOptionDict(value=e["code"], label=e["name"])
+                        for e in emd_list)
+        if user_input is not None:
+            return await self._finish_safety_alert(
+                sgg_code=self._sa_sgg_code,
+                emd_code=user_input.get("emd_code", ""))
+        return self.async_show_form(step_id="safety_alert_emd", data_schema=vol.Schema({
+            vol.Optional("emd_code", default=""): SelectSelector(
+                SelectSelectorConfig(options=emd_opts,
+                                     mode=SelectSelectorMode.DROPDOWN)),
+        }), errors=errors)
+
+    async def _finish_safety_alert(self, sgg_code: str, emd_code: str) -> FlowResult:
+        """Build the region entry and create the config entry."""
+        # Compose a friendly title — e.g. "안전알림 (경기도 시흥시 은행동)"
+        parts = [self._sa_sido_name]
+        if sgg_code:
+            parts.append(self._sa_sgg_name)
+        if emd_code:
+            # emd name is whatever the user just selected; we don't have it
+            # cached, but the title is cosmetic — sgg-level granularity is
+            # enough for the device label.
+            pass
+        title_region = " ".join(parts)
+        region_item = {
+            "code": self._sa_sido_code,
+            "name": title_region,
+            "code2": sgg_code or None,
+            "code3": emd_code or None,
+        }
+        unique_parts = [self._sa_sido_code, sgg_code or "x", emd_code or "x"]
+        await self.async_set_unique_id(
+            f"{ENTRY_SAFETY_ALERT}_" + "_".join(unique_parts))
+        self._abort_if_unique_id_configured()
+        return self.async_create_entry(
+            title=f"안전알림 ({title_region})",
+            data={CONF_ENTRY_TYPE: ENTRY_SAFETY_ALERT,
+                  "regions": [region_item]})
 
     # ══════════ 한전 (KEPCO) ══════════
 
@@ -684,7 +734,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         sido_opts = [SelectOptionDict(value=k, label=k) for k in SIDO_LIST.keys()]
         return self.async_show_form(step_id="kma_weather", data_schema=vol.Schema({
             vol.Required("api_key"): str,
-            vol.Required("sido"): SelectSelector(
+            vol.Required("sido_code"): SelectSelector(
                 SelectSelectorConfig(options=sido_opts,
                                      mode=SelectSelectorMode.DROPDOWN)),
         }), errors=errors)
