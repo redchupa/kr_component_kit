@@ -15,3 +15,10 @@ Thumbs.db
 HACS_SUBMISSION.md
 REDDIT_POST.md
 PROMO_DRAFTS.md
+
+# Throwaway scripts / experimental files (local only)
+pharmacy_READY
+pharmacy_poll.py
+test_pharmacy_key.py
+test_*.py
+*_poll.py
