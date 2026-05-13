@@ -86,6 +86,7 @@ Installation and configuration details are in the Korean sections below.
 - **🎁 등록하면 생기는 것:** 기기 `한전 (사용자ID)` 아래에 다음 5개 sensor —
   - `고객번호`, `전력구분`, `지난달 요금` (원), `예상 요금` (원), `현재 사용량` (kWh)
 - **이런 분께 추천:** 예상 요금이 일정 금액을 넘으면 알림을 받고 싶은 분, 월 사용량 그래프를 그리고 싶은 분
+- ⚠️ **알려진 한계** — 한전 홈페이지 페이지명 변경 시 로그인 감지 실패할 수 있음(2차 인증 미지원). 비정상 시 HA 로그에 "KEPCO login: unknown redirect" 메시지로 표시됩니다.
 
 #### 💧 아리수 (서울시 상수도)
 - **수도요금** 및 사용량 조회
@@ -94,6 +95,7 @@ Installation and configuration details are in the Korean sections below.
 - **🎁 등록하면 생기는 것:** 기기 `아리수 (수용가번호)` 아래에 sensor 3개 —
   - `수도 요금` (원), `사용량` (㎥), `청구월`
 - **이런 분께 추천:** 가족 사용량을 매월 추적하고 싶은 서울 거주자
+- ⚠️ **알려진 한계** — 서울시청 페이지(`i121.seoul.go.kr`) HTML 구조 변경 시 파싱 실패 가능. 9자리 수용가번호 가정.
 
 #### 🏠 가스앱 (도시가스)
 - **가스 사용량** 및 요금 조회
@@ -126,6 +128,7 @@ Installation and configuration details are in the Korean sections below.
   - binary_sensor `오늘 안전알림 여부`
   - event `안전알림 이벤트`
 - **이런 분께 추천:** 처음 컴포넌트를 체험해보고 싶은 분
+- ⚠️ **알려진 한계** — `safekorea.go.kr` HTML 구조 변경 또는 TLS profile 변경 시 일시 미작동 가능. 컴포넌트 이전 버전에서 만든 sensor 17개 친화 이름 패턴 (`최신 알림 유형/내용/대상지/일자`, `지난/지지난 알림...`)이 있다면 데이터 schema가 달라진 orphan 가능성 — entry 삭제 후 재등록 권장.
 
 #### 🌪️ 기상특보 (기상청)
 - **호우 / 강풍 / 한파 / 폭염** 등 12종 특보를 `event` 엔티티로 노출
@@ -170,7 +173,7 @@ Installation and configuration details are in the Korean sections below.
 
 ### 💊 생활 정보
 
-#### 💊 약국 (전국 약국 정보 — data.go.kr)
+#### 💊 약국 (전국 약국 정보 — data.go.kr) ✅ *작동 검증 완료*
 - **시도/시군구별** 약국 목록과 영업시간
 - `open_now` 동적 계산 (요일·시각 기반) — 지금 영업중인지 자동 판단
 - 가까운 순 정렬에 쓸 수 있는 좌표 attribute 포함
@@ -203,12 +206,17 @@ Installation and configuration details are in the Korean sections below.
   - sensor `학교 정보` (state = 학교명, attrs: 학년·반·주소·전화)
   - 추가로 학사일정/시간표 calendar 엔티티
 - **이런 분께 추천:** 아침에 자녀에게 "오늘 급식 뭐야?" 음성 응답을 시키고 싶은 분
+- ⚠️ **알려진 한계** — NEIS는 데이터 없는 날짜에 `INFO-200` 응답을 보내는데 현재 코드는 이것도 에러로 처리. 방학·휴일 등 빈 날짜에 일시 에러 로그가 남을 수 있습니다.
 
 #### 🚌 대중교통 (Transit)
 - **지하철 실시간 도착정보** (서울 열린데이터광장)
-- **버스 실시간 도착정보** (국토부 + 카카오맵 정류장 ID)
+- **버스 실시간 도착정보** (카카오맵 비공식 endpoint) — 키 불필요
+- (옵션) **환승경로 검색** (서울시 환승경로 API) — 별도 키 필요
 - TIMESTAMP 기반 도착 sensor — 등록한 역/정류장마다 다음 2대까지 표시
-- 서울 API 키 + 국토부 버스 API 키 필요
+- **필요한 키 — 사용 시나리오별로 다름:**
+  - 지하철 도착정보만 → 서울 열린데이터광장 키 1개
+  - 버스 도착정보만 → **키 불필요** (카카오맵 정류장 ID만 입력)
+  - 환승경로 검색까지 → 서울시 환승경로 API 키 추가 (config_flow에서 `bus_api_key` Optional 입력)
 - **설정 흐름**:
   1. 두 API 키 입력
   2. 메뉴에서 "지하철 역 추가" 또는 "버스 노선 추가" 선택
