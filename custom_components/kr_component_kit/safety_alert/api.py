@@ -1,4 +1,13 @@
-"""Safety Alert API client for Home Assistant integration."""
+"""Safety Alert API client for Home Assistant integration.
+
+Note: ``curl_cffi`` is imported lazily inside the request method, not at
+module import time. Importing curl_cffi triggers disk reads (listdir on
+site-packages, read_text on its METADATA) which Home Assistant flags as
+a blocking call inside the event loop during ``async_setup_entry``. The
+lazy import defers those file operations until the first actual HTTP
+request, by which time HA can run them on the executor without
+breaking the loop.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +15,6 @@ import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
-import curl_cffi
 from bs4 import BeautifulSoup
 
 from .exceptions import SafetyAlertConnectionError
@@ -47,6 +55,12 @@ class SafetyAlertApiClient:
             "startDate": start_date.strftime("%Y-%m-%d"),
             "endDate": end_date.strftime("%Y-%m-%d"),
         }
+
+        # Lazy import — see module docstring. Importing curl_cffi at module
+        # top-level runs blocking I/O (listdir, read_text on METADATA) which
+        # HA detects and warns about during async_setup_entry. Deferring to
+        # the first request keeps event-loop-safe.
+        import curl_cffi
 
         try:
             async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
