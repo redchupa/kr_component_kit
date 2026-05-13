@@ -2,6 +2,8 @@
 
 > **한국 거주자를 위한 Home Assistant 통합** — 전기·수도·가스·날씨·재난·약국·학교 급식·실시간 대중교통까지, 한국에서만 쓸 수 있는 13가지 공공 서비스를 한 패키지로.
 
+🇰🇷 **한국어 (이 페이지)** · 🇬🇧 [English README](README.en.md)
+
 [![hacs][hacsbadge]][hacs]
 [![GitHub Release][releases-shield]][releases]
 [![GitHub Activity][commits-shield]][commits]
