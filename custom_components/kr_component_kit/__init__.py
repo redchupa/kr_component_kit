@@ -86,6 +86,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     elif etype == ENTRY_SAFETY_ALERT:
         from .safety_alert.coordinator import SafetyAlertCoordinator
         regions = entry.data.get("regions", [])
+        # Backward-compat: single area_code schema (older saved entries).
         if not regions and entry.data.get("area_code"):
             regions = [{
                 "code": entry.data["area_code"],
@@ -93,6 +94,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "code2": entry.data.get("area_code2"),
                 "code3": entry.data.get("area_code3"),
             }]
+        # Backward-compat: even older area_codes (plural, bare list of strings)
+        # schema — produced 17-sensor entity layout that's now orphaned. Map
+        # each bare code into the current {"code", "name"} shape so the entry
+        # auto-heals on next HA start instead of staying empty.
+        if not regions and entry.data.get("area_codes"):
+            legacy = entry.data["area_codes"]
+            if isinstance(legacy, list):
+                regions = [
+                    {"code": c, "name": ""} if isinstance(c, str)
+                    else {"code": c.get("code", ""), "name": c.get("name", "")}
+                    for c in legacy if c
+                ]
         coordinators = {}
         for region in regions:
             c = SafetyAlertCoordinator(

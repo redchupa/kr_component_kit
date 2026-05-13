@@ -193,7 +193,7 @@
       }
     },
     "error": {
-      "cannot_connect": "API에 연결할 수 없습니다.",
+      "cannot_connect": "API에 연결할 수 없습니다. ({error})",
       "invalid_api_key": "API 키가 유효하지 않습니다.",
       "no_schools_found": "학교를 찾을 수 없습니다.",
       "no_selection": "하나 이상 선택하세요.",
