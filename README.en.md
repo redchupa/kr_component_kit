@@ -97,7 +97,7 @@ Each "👉 Direct search" link below lands on the portal's search-results page w
 
 ---
 
-### 📢 Disaster Alert (재난문자)
+### 📢 Disaster Alert (재난문자) *(✅ Verified working — 2026-05-14)*
 
 | Field | Value |
 |---|---|
@@ -105,8 +105,10 @@ Each "👉 Direct search" link below lands on the portal's search-results page w
 | Operating agency | Ministry of the Interior and Safety |
 | Exact dataset name | **행정안전부_긴급재난문자** (MOIS Emergency Disaster Alerts) |
 | Endpoint | `/V2/api/DSSP-IF-00247` |
-| Provisioning | **Manual operator review** — not auto-issued |
+| Provisioning | **Manual operator review** — not auto-issued (1–3 business days) |
 | Daily call quota | Default 1,000/day. Integration polls every 5 min → 288 calls/day. Plenty of headroom. |
+| Key validity | **1 year** *(renew on My Page before expiration — check the 만료일자 field on the key screen)* |
+| Key form | **Single form only** *(unlike data.go.kr, there is no Decoding/Encoding split)* |
 | IP required | ⚠️ **Application form requires registering the calling IP** (see Step 3) |
 
 > ⚠️ Safety Data Sharing Platform and Public Data Portal are **separate sites** even though both are government-run. Sign up separately even if you already have a `data.go.kr` account.
@@ -159,16 +161,22 @@ My Page → "데이터 활용신청 내역" (Application history) — check stat
 - *"발급됨"* (Issued) → service key value becomes visible.
 
 #### 5️⃣ Copy the key → enter into HA
-My Page → the issued entry → copy the **서비스키 값 (Service key value)** → in HA, add integration → pick **재난문자** → paste into the auth-key field.
+My Page → click the **값 복사하기 (Copy value)** button next to the issued key → in HA, add integration → pick **재난문자** → paste into the auth-key field as-is.
 
-> 💡 The integration URL-encodes the key internally. If the issuance screen shows both Decoding and Encoding forms, **use the Decoding (raw string) form**. Pasting the Encoded form (with `%XX` escapes) causes double-encoding and the server rejects it.
+> 💡 safetydata.go.kr provides the key in **a single form** (no Decoding/Encoding split like data.go.kr). Whatever the **값 복사하기** button copies, paste it as-is. The integration handles URL encoding internally.
+
+#### 🔁 After issuance
+
+- **Quota monitoring**: My Page shows `일일호출량 / 호출량` — the first number is the limit (1000), the second is **cumulative usage today** (`0` means "not used yet today", not "max"). Resets at midnight KST.
+- **Updating the registered IP**: If your dynamic IP changes, go to My Page → key → **목록 변경신청** (Edit application) → update the IP field. ⚠️ Edits also go through operator review. If your IP rotates often, save yourself the loop and switch to `*.*.*.*` from the start.
+- **Key expiration (1 year)**: Renew via 변경신청 before the 만료일자 date. Expired keys return 401.
 
 #### 🆘 Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `401 / SERVICE KEY ERROR` | Key not activated yet / wrong encoding form | Wait 30–60 min after issuance and retry. If still failing, try the other (Encoding ↔ Decoding) form |
-| `403 / ACCESS_DENIED` | **IP mismatch (most common cause)** | Compare `curl -s https://api.ipify.org` output against the IP registered in My Page. If they differ, update the registered IP. If it changes often, re-register with `*.*.*.*` |
+| `401 / SERVICE KEY ERROR` | Key not yet activated / expired / whitespace in pasted value | Wait 30–60 min after issuance. Check the 만료일자 (expiration date). Trim any leading/trailing whitespace and re-paste |
+| `403 / ACCESS_DENIED` | **IP mismatch (most common cause)** | Compare `curl -s https://api.ipify.org` output against the IP registered in My Page. If they differ, update the registered IP via **목록 변경신청**. If it changes often, re-register with `*.*.*.*` |
 | Empty response / `body []` | Normal — no recent disaster alerts in that time window | Quiet hours legitimately return empty. The feed fills up during major incidents or severe weather |
 
 ---
@@ -408,7 +416,7 @@ Some services use non-official paths (HTML scraping, mobile-app APIs). External-
 | 🌫️ **AirKorea Living Index (UV / air stagnation)** | Code calls `V4` endpoint, but the portal seems upgraded to `V5` — live operation unverified. Required pollution datasets are unaffected |
 | 🏫 **NEIS** | `INFO-200` (no-data, normal) is currently treated as an error — log noise possible on school holidays / vacation periods (no functional impact) |
 
-> ✅ **Verified working** as of release `v4.2.17`: Pharmacy (live HA query showed sensor state=20 with full attribute payload). Safety Alert (cascading district registration successful).
+> ✅ **Verified working** as of release `v4.2.18`: Pharmacy (live HA query showed sensor state=20 with full attribute payload). Safety Alert (cascading district registration successful). Disaster Alert (safetydata.go.kr key issued → entities live, 2026-05-14).
 
 > 🐛 **Something broke after a site change?** Open a [GitHub issue](https://github.com/redchupa/kr_component_kit/issues) and a fix PR is usually quick.
 
