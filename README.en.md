@@ -101,13 +101,75 @@ Each "👉 Direct search" link below lands on the portal's search-results page w
 
 | Field | Value |
 |---|---|
-| 🌐 Portal | [Safety Data Portal (safetydata.go.kr)](https://www.safetydata.go.kr) |
-| 🔎 Direct search | Search box at top → type `재난문자` |
-| Search keyword | `재난문자` |
+| 🌐 Portal | [Safety Data Sharing Platform (safetydata.go.kr)](https://www.safetydata.go.kr) |
 | Operating agency | Ministry of the Interior and Safety |
-| Endpoint | `safetydata.go.kr/V2/api/DSSP-IF-00247` |
+| Exact dataset name | **행정안전부_긴급재난문자** (MOIS Emergency Disaster Alerts) |
+| Endpoint | `/V2/api/DSSP-IF-00247` |
+| Provisioning | **Manual operator review** — not auto-issued |
+| Daily call quota | Default 1,000/day. Integration polls every 5 min → 288 calls/day. Plenty of headroom. |
+| IP required | ⚠️ **Application form requires registering the calling IP** (see Step 3) |
 
-> ⚠️ Safety Data Portal and Public Data Portal are **separate sites** even though both are government-run. Sign up separately even if you already have a `data.go.kr` account.
+> ⚠️ Safety Data Sharing Platform and Public Data Portal are **separate sites** even though both are government-run. Sign up separately even if you already have a `data.go.kr` account.
+
+#### 1️⃣ Sign up
+Register at [safetydata.go.kr](https://www.safetydata.go.kr). Your `data.go.kr` credentials do **not** work here.
+
+#### 2️⃣ Pick the correct dataset *(⚠️ two cards look similar)*
+Top search box → type `재난문자` → you'll see **two** result cards:
+
+| Card | Use? |
+|---|---|
+| **행정안전부_긴급재난문자** *(50k+ views / 28M downloads / `#재난문자` tag)* | ✅ **This one** |
+| 재난문자(속보) *(~900 views / tag `#-1`)* | ❌ Different endpoint code, incompatible with this integration |
+
+Click the correct card → confirm the endpoint code on the detail page is `DSSP-IF-00247`.
+
+#### 3️⃣ Fill out the application form
+
+On the detail page → **오픈API 활용신청** (Open API Use Application) button → form fields:
+
+**① 활용목적 (Purpose)** *(required)*
+- Category: **`앱개발 (모바일, 솔루션 등)`** (App development) recommended
+- Description example: *"Use in a Home Assistant integration to deliver real-time emergency disaster alerts to family members."*
+
+**② 하루 최대 호출 횟수 (Daily call quota)** *(required)*
+- Enter **`1000`**. Integration uses 288/day at the default 5-minute polling — well under the limit.
+
+**③ 아이피 (IP address)** *(required)* — most important field
+You must register the **public outbound IP** of the machine running Home Assistant. If the registered IP doesn't match the actual request IP, the API returns **403 Forbidden** even with a valid key.
+
+| Option | Example | Recommendation |
+|---|---|---|
+| Single IP | `121.123.45.67` | Strictest. But **Korean residential ISPs use dynamic IPs** — it'll change within days/months, requiring re-application |
+| CIDR-like wildcard | `121.123.*.*` | Safer if your ISP rotates within the same range |
+| Allow all | `*.*.*.*` | ⭐ **Recommended for personal use** — no need to track IP changes. The key itself is the secret; broad IP scope is fine for low-risk personal use |
+
+🔎 **How to find your HA server's public IP:**
+HA add-on → **Terminal & SSH** (or SSH in) → run:
+```bash
+curl -s https://api.ipify.org
+```
+Use whatever IP this prints in the application form.
+
+**④ License agreement checkbox** → click **이용신청** (Submit).
+
+#### 4️⃣ Wait for approval
+My Page → "데이터 활용신청 내역" (Application history) — check status:
+- *"승인 대기 중입니다"* (Pending review) → an operator must approve it. **Not auto-issued — expect 1–3 business days.**
+- *"발급됨"* (Issued) → service key value becomes visible.
+
+#### 5️⃣ Copy the key → enter into HA
+My Page → the issued entry → copy the **서비스키 값 (Service key value)** → in HA, add integration → pick **재난문자** → paste into the auth-key field.
+
+> 💡 The integration URL-encodes the key internally. If the issuance screen shows both Decoding and Encoding forms, **use the Decoding (raw string) form**. Pasting the Encoded form (with `%XX` escapes) causes double-encoding and the server rejects it.
+
+#### 🆘 Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `401 / SERVICE KEY ERROR` | Key not activated yet / wrong encoding form | Wait 30–60 min after issuance and retry. If still failing, try the other (Encoding ↔ Decoding) form |
+| `403 / ACCESS_DENIED` | **IP mismatch (most common cause)** | Compare `curl -s https://api.ipify.org` output against the IP registered in My Page. If they differ, update the registered IP. If it changes often, re-register with `*.*.*.*` |
+| Empty response / `body []` | Normal — no recent disaster alerts in that time window | Quiet hours legitimately return empty. The feed fills up during major incidents or severe weather |
 
 ---
 
