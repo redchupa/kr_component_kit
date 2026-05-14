@@ -82,20 +82,36 @@ class SafetyAlertApiClient:
         except SafetyAlertConnectionError:
             raise
         except Exception as e:
-            LOGGER.error("Safety Alert API request failed: %s", e)
+            LOGGER.exception("Safety Alert API request failed: %s", e)
             raise SafetyAlertConnectionError(f"Request failed: {e}")
 
     def _parse_html(self, html: str) -> Dict[str, Any]:
-        """Parse disaster SMS data from HTML response."""
+        """Parse disaster SMS data from HTML response.
+
+        Uses ``find``/``find_all`` instead of CSS ``select`` to avoid
+        soupsieve, which on some environments fails with
+        ``module 'bs4' has no attribute 'Tag'`` when the installed
+        beautifulsoup4 does not expose ``Tag`` at the module level.
+        """
         soup = BeautifulSoup(html, "html.parser")
         alerts: List[Dict[str, Any]] = []
 
-        # 전체 건수
-        count_span = soup.select_one("div.board-count span")
-        total_count = int(count_span.get_text(strip=True)) if count_span else 0
+        # 전체 건수: <div class="board-count"><span>N</span></div>
+        count_div = soup.find("div", class_="board-count")
+        count_span = count_div.find("span") if count_div else None
+        try:
+            total_count = int(count_span.get_text(strip=True)) if count_span else 0
+        except (ValueError, TypeError):
+            total_count = 0
 
-        # 웹용 테이블 파싱 (board-listarea)
-        rows = soup.select("div.board-listarea table tbody tr")
+        # 웹용 테이블 파싱: div.board-listarea > table > tbody > tr
+        rows: List[Any] = []
+        list_div = soup.find("div", class_="board-listarea")
+        if list_div:
+            table = list_div.find("table")
+            tbody = table.find("tbody") if table else None
+            if tbody:
+                rows = tbody.find_all("tr")
         for row in rows:
             cells = row.find_all("td")
             if len(cells) < 2:
