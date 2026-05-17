@@ -818,37 +818,41 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_seoul_bus_add(self, user_input=None) -> FlowResult:
         """Ask for an ARS-ID, probe it, then go to route selection."""
-        from .seoul_bus.api import SeoulBusApiError, build_route_labels, fetch_station
+        from .seoul_bus.api import (
+            SeoulBusApiError, build_route_labels, fetch_station, normalize_ars_id)
         errors: dict[str, str] = {}
         if user_input is not None:
-            ars_id = user_input["ars_id"].strip()
-            session = async_get_clientsession(self.hass)
-            try:
-                items = await fetch_station(
-                    session, self._data["api_key"], ars_id)
-            except SeoulBusApiError as e:
-                _LOGGER.warning("Seoul Bus station probe failed: %s", e)
-                errors["ars_id"] = "cannot_connect"
-                items = []
-            if not errors:
-                if not items:
-                    errors["ars_id"] = "no_stops_found"
-                else:
-                    self._sb_ars_id = ars_id
-                    # Pick the first non-empty `stNm` across items rather than
-                    # blindly trusting items[0] — defensive against carriers
-                    # occasionally returning the station name on later rows.
-                    api_station_name = next(
-                        (it.get("stNm") for it in items if it.get("stNm")),
-                        "",
-                    )
-                    self._sb_station_name = (
-                        user_input.get("station_name", "").strip()
-                        or api_station_name
-                        or f"정류장 {ars_id}"
-                    )
-                    self._sb_route_labels = build_route_labels(items)
-                    return await self.async_step_seoul_bus_routes()
+            ars_id = normalize_ars_id(user_input["ars_id"])
+            if ars_id is None:
+                errors["ars_id"] = "invalid_ars_format"
+            else:
+                session = async_get_clientsession(self.hass)
+                try:
+                    items = await fetch_station(
+                        session, self._data["api_key"], ars_id)
+                except SeoulBusApiError as e:
+                    _LOGGER.warning("Seoul Bus station probe failed: %s", e)
+                    errors["ars_id"] = "cannot_connect"
+                    items = []
+                if not errors:
+                    if not items:
+                        # The API doesn't distinguish "ARS-ID doesn't exist"
+                        # from "this stop currently has no upcoming buses",
+                        # so the message must cover both.
+                        errors["ars_id"] = "no_arrivals_yet"
+                    else:
+                        self._sb_ars_id = ars_id
+                        api_station_name = next(
+                            (it.get("stNm") for it in items if it.get("stNm")),
+                            "",
+                        )
+                        self._sb_station_name = (
+                            user_input.get("station_name", "").strip()
+                            or api_station_name
+                            or f"정류장 {ars_id}"
+                        )
+                        self._sb_route_labels = build_route_labels(items)
+                        return await self.async_step_seoul_bus_routes()
         return self.async_show_form(
             step_id="seoul_bus_add",
             data_schema=vol.Schema({
@@ -1093,11 +1097,13 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
     async def async_step_seoul_bus_opt_add(self, user_input=None):
         """Add a new station to the working copy."""
         from .seoul_bus.api import (
-            SeoulBusApiError, build_route_labels, fetch_station)
+            SeoulBusApiError, build_route_labels, fetch_station, normalize_ars_id)
         errors: dict[str, str] = {}
         if user_input is not None:
-            ars_id = user_input["ars_id"].strip()
-            if any(s["ars_id"] == ars_id for s in self._stations):
+            ars_id = normalize_ars_id(user_input["ars_id"])
+            if ars_id is None:
+                errors["ars_id"] = "invalid_ars_format"
+            elif any(s["ars_id"] == ars_id for s in self._stations):
                 errors["ars_id"] = "already_added"
             else:
                 session = async_get_clientsession(self.hass)
@@ -1110,7 +1116,7 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
                     items = []
                 if not errors:
                     if not items:
-                        errors["ars_id"] = "no_stops_found"
+                        errors["ars_id"] = "no_arrivals_yet"
                     else:
                         self._opt_sb_ars_id = ars_id
                         api_name = next(

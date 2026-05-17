@@ -24,6 +24,27 @@ def _mask(key: str) -> str:
     return f"{key[:4]}…" if key else "(empty)"
 
 
+def normalize_ars_id(raw: str) -> str | None:
+    """Normalize a user-entered ARS-ID.
+
+    Returns the 5-digit ARS-ID on success, or None when the input cannot
+    be coerced (non-numeric or longer than 5 digits — e.g. a KakaoMap
+    `busStopId` mistakenly pasted into the Seoul Bus flow).
+
+    Leading zeros are added when the user types something like "1234"
+    for ARS-ID "01234" — the Seoul Bus API is strict about the exact
+    5-character form.
+    """
+    if raw is None:
+        return None
+    cleaned = raw.strip()
+    if not cleaned.isdigit():
+        return None
+    if len(cleaned) > 5:
+        return None
+    return cleaned.zfill(5)
+
+
 async def fetch_station(
     session: aiohttp.ClientSession, api_key: str, ars_id: str,
 ) -> list[dict[str, Any]]:
@@ -62,9 +83,20 @@ async def fetch_station(
 
     items = (result.get("msgBody") or {}).get("itemList", [])
     if items is None:
+        # Logged at debug so users diagnosing "정류장을 찾을 수 없습니다"
+        # can confirm the API returned a successful but empty response.
+        _LOGGER.debug(
+            "Seoul Bus API returned empty itemList for arsId=%s (errMsg=%r). "
+            "Could mean: (a) ARS-ID does not exist, or (b) no buses are "
+            "currently scheduled at this stop.",
+            ars_id, err_code or "(absent)")
         return []
     if not isinstance(items, list):
         items = [items]
+    if not items:
+        _LOGGER.debug(
+            "Seoul Bus API returned 0 items for arsId=%s (errMsg=%r).",
+            ars_id, err_code or "(absent)")
     return items
 
 
