@@ -16,7 +16,9 @@
           "pharmacy": "Pharmacy",
           "airkorea": "AirKorea",
           "kma_weather": "KMA Weather",
-          "earthquake": "Earthquake"
+          "earthquake": "Earthquake",
+          "seoul_bus": "Seoul Bus",
+          "kakao_bus": "Kakao Bus"
         }
       },
       "weather_warning": {
@@ -201,6 +203,66 @@
         "data": {
           "regions": "Districts",
           "air_station": "Air Station (O₃/UV)"
+        }
+      },
+      "seoul_bus": {
+        "title": "Seoul Bus — Service Key",
+        "description": "Issued at data.go.kr (정류소정보조회).",
+        "data": {
+          "api_key": "Service Key"
+        }
+      },
+      "seoul_bus_add": {
+        "title": "Seoul Bus — Add Station",
+        "description": "Enter the ARS-ID (e.g. 23288). Look it up at bus.go.kr.",
+        "data": {
+          "ars_id": "ARS-ID",
+          "station_name": "Station Name (optional)"
+        }
+      },
+      "seoul_bus_routes": {
+        "title": "Seoul Bus — Select Routes",
+        "data": {
+          "routes": "Bus Routes"
+        }
+      },
+      "seoul_bus_menu": {
+        "title": "Seoul Bus",
+        "menu_options": {
+          "seoul_bus_add": "Add Another Station",
+          "seoul_bus_done": "Done"
+        }
+      },
+      "kakao_bus": {
+        "title": "Kakao Bus — Search Stop",
+        "description": "Search a bus stop by name (KakaoMap).",
+        "data": {
+          "stop_name": "Bus Stop Name"
+        }
+      },
+      "kakao_bus_search": {
+        "title": "Kakao Bus — Search Another Stop",
+        "data": {
+          "stop_name": "Bus Stop Name"
+        }
+      },
+      "kakao_bus_select_stop": {
+        "title": "Kakao Bus — Pick a Stop",
+        "data": {
+          "stop_id": "Bus Stop"
+        }
+      },
+      "kakao_bus_select_routes": {
+        "title": "Kakao Bus — Select Routes",
+        "data": {
+          "routes": "Bus Routes"
+        }
+      },
+      "kakao_bus_menu": {
+        "title": "Kakao Bus",
+        "menu_options": {
+          "kakao_bus_search": "Add Another Stop",
+          "kakao_bus_done": "Done"
         }
       }
     },

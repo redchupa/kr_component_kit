@@ -44,7 +44,8 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             menu_options=["weather_warning", "transit", "fuel", "school",
                          "disaster", "safety_alert", "kepco", "gasapp", "arisu",
-                         "pharmacy", "airkorea", "kma_weather", "earthquake"],
+                         "pharmacy", "airkorea", "kma_weather", "earthquake",
+                         "seoul_bus", "kakao_bus"],
         )
 
     # ══════════ 기상특보 ══════════
@@ -789,6 +790,216 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional("min_magnitude", default=3.0): vol.Coerce(float),
         }), errors=errors)
 
+    # ══════════ 서울 버스 ══════════
+    async def async_step_seoul_bus(self, user_input=None) -> FlowResult:
+        """Step 1: API key validation, then loop into station-add flow."""
+        from .seoul_bus.api import validate_api_key
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            api_key = user_input["api_key"].strip()
+            session = async_get_clientsession(self.hass)
+            if await validate_api_key(session, api_key):
+                self._data = {CONF_ENTRY_TYPE: ENTRY_SEOUL_BUS,
+                              "api_key": api_key,
+                              "stations": []}
+                return await self.async_step_seoul_bus_add()
+            errors["api_key"] = "invalid_api_key"
+        return self.async_show_form(
+            step_id="seoul_bus",
+            data_schema=vol.Schema({vol.Required("api_key"): str}),
+            errors=errors,
+            description_placeholders={
+                "api_key_desc": "공공데이터포털(data.go.kr) > 정류소정보조회 인증키",
+            },
+        )
+
+    async def async_step_seoul_bus_add(self, user_input=None) -> FlowResult:
+        """Ask for an ARS-ID, probe it, then go to route selection."""
+        from .seoul_bus.api import SeoulBusApiError, build_route_labels, fetch_station
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            ars_id = user_input["ars_id"].strip()
+            session = async_get_clientsession(self.hass)
+            try:
+                items = await fetch_station(
+                    session, self._data["api_key"], ars_id)
+            except SeoulBusApiError as e:
+                _LOGGER.warning("Seoul Bus station probe failed: %s", e)
+                errors["ars_id"] = "cannot_connect"
+                items = []
+            if not errors:
+                if not items:
+                    errors["ars_id"] = "no_stops_found"
+                else:
+                    self._sb_ars_id = ars_id
+                    self._sb_station_name = (
+                        user_input.get("station_name", "").strip()
+                        or items[0].get("stNm")
+                        or f"정류장 {ars_id}"
+                    )
+                    self._sb_route_labels = build_route_labels(items)
+                    return await self.async_step_seoul_bus_routes()
+        return self.async_show_form(
+            step_id="seoul_bus_add",
+            data_schema=vol.Schema({
+                vol.Required("ars_id"): str,
+                vol.Optional("station_name", default=""): str,
+            }),
+            errors=errors,
+            description_placeholders={
+                "ars_id_desc": "정류장 ARS-ID (예: 23288). bus.go.kr 에서 조회",
+            },
+        )
+
+    async def async_step_seoul_bus_routes(self, user_input=None) -> FlowResult:
+        """Pick which routes at this station to expose as sensors."""
+        import homeassistant.helpers.config_validation as cv
+        if user_input is not None:
+            self._data["stations"].append({
+                "ars_id": self._sb_ars_id,
+                "station_name": self._sb_station_name,
+                "routes": user_input.get("routes", []),
+            })
+            return await self.async_step_seoul_bus_menu()
+        labels = self._sb_route_labels
+        return self.async_show_form(
+            step_id="seoul_bus_routes",
+            data_schema=vol.Schema({
+                vol.Required("routes", default=list(labels.keys())):
+                    cv.multi_select(labels),
+            }),
+        )
+
+    async def async_step_seoul_bus_menu(self, user_input=None) -> FlowResult:
+        """After adding a station, offer another or finish."""
+        return self.async_show_menu(
+            step_id="seoul_bus_menu",
+            menu_options=["seoul_bus_add", "seoul_bus_done"],
+        )
+
+    async def async_step_seoul_bus_done(self, user_input=None) -> FlowResult:
+        ids = "_".join(sorted(s["ars_id"] for s in self._data["stations"]))
+        await self.async_set_unique_id(f"{ENTRY_SEOUL_BUS}_{ids}")
+        self._abort_if_unique_id_configured()
+        return self.async_create_entry(title="서울버스", data=self._data)
+
+    # ══════════ 카카오 버스 ══════════
+    async def async_step_kakao_bus(self, user_input=None) -> FlowResult:
+        """Step 1 — enter a bus stop name to search."""
+        from .kakao_bus.api import KakaoBusApiError, search_stops
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            name = user_input["stop_name"].strip()
+            session = async_get_clientsession(self.hass)
+            try:
+                stops = await search_stops(session, name)
+            except KakaoBusApiError as e:
+                _LOGGER.warning("KakaoMap search failed: %s", e)
+                errors["base"] = "cannot_connect"
+                stops = {}
+            if not errors:
+                if not stops:
+                    errors["stop_name"] = "no_stops_found"
+                else:
+                    self._data = {CONF_ENTRY_TYPE: ENTRY_KAKAO_BUS, "stops": []}
+                    self._kbus_results = stops
+                    return await self.async_step_kakao_bus_select_stop()
+        return self.async_show_form(
+            step_id="kakao_bus",
+            data_schema=vol.Schema({vol.Required("stop_name"): str}),
+            errors=errors,
+        )
+
+    async def async_step_kakao_bus_search(self, user_input=None) -> FlowResult:
+        """Repeat search (used when adding more stops to an existing entry)."""
+        from .kakao_bus.api import KakaoBusApiError, search_stops
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            name = user_input["stop_name"].strip()
+            session = async_get_clientsession(self.hass)
+            try:
+                stops = await search_stops(session, name)
+            except KakaoBusApiError as e:
+                _LOGGER.warning("KakaoMap search failed: %s", e)
+                errors["base"] = "cannot_connect"
+                stops = {}
+            if not errors:
+                if not stops:
+                    errors["stop_name"] = "no_stops_found"
+                else:
+                    self._kbus_results = stops
+                    return await self.async_step_kakao_bus_select_stop()
+        return self.async_show_form(
+            step_id="kakao_bus_search",
+            data_schema=vol.Schema({vol.Required("stop_name"): str}),
+            errors=errors,
+        )
+
+    async def async_step_kakao_bus_select_stop(self, user_input=None) -> FlowResult:
+        """Step 2 — pick a stop from the search results, then probe routes."""
+        from .kakao_bus.api import KakaoBusApiError, fetch_stop_routes
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            stop_id = user_input["stop_id"]
+            stop_info = self._kbus_results.get(stop_id) or {}
+            session = async_get_clientsession(self.hass)
+            try:
+                routes = await fetch_stop_routes(session, stop_id)
+            except KakaoBusApiError as e:
+                _LOGGER.warning("KakaoMap stop-routes failed: %s", e)
+                errors["base"] = "cannot_connect"
+                routes = []
+            if not errors:
+                if not routes:
+                    errors["base"] = "no_stops_found"
+                else:
+                    self._kbus_stop_id = stop_id
+                    self._kbus_stop_name = stop_info.get("title") or stop_id
+                    self._kbus_routes = routes
+                    return await self.async_step_kakao_bus_select_routes()
+        opts = {k: v["title"] for k, v in self._kbus_results.items()}
+        return self.async_show_form(
+            step_id="kakao_bus_select_stop",
+            data_schema=vol.Schema({vol.Required("stop_id"): vol.In(opts)}),
+            errors=errors,
+        )
+
+    async def async_step_kakao_bus_select_routes(
+        self, user_input=None) -> FlowResult:
+        """Step 3 — pick routes at the chosen stop."""
+        import homeassistant.helpers.config_validation as cv
+        if user_input is not None:
+            self._data["stops"].append({
+                "stop_id": self._kbus_stop_id,
+                "stop_name": self._kbus_stop_name,
+                "routes": user_input.get("routes", []),
+            })
+            return await self.async_step_kakao_bus_menu()
+        labels = {
+            r["number"]: (f"{r['type']} {r['number']}".strip()
+                          if r["type"] else r["number"])
+            for r in self._kbus_routes
+        }
+        return self.async_show_form(
+            step_id="kakao_bus_select_routes",
+            data_schema=vol.Schema({
+                vol.Required("routes", default=list(labels.keys())):
+                    cv.multi_select(labels),
+            }),
+        )
+
+    async def async_step_kakao_bus_menu(self, user_input=None) -> FlowResult:
+        return self.async_show_menu(
+            step_id="kakao_bus_menu",
+            menu_options=["kakao_bus_search", "kakao_bus_done"],
+        )
+
+    async def async_step_kakao_bus_done(self, user_input=None) -> FlowResult:
+        ids = "_".join(sorted(s["stop_id"] for s in self._data["stops"]))
+        await self.async_set_unique_id(f"{ENTRY_KAKAO_BUS}_{ids}")
+        self._abort_if_unique_id_configured()
+        return self.async_create_entry(title="카카오버스", data=self._data)
+
         # ══════════ Options Flow =════════
 
     @staticmethod
@@ -925,6 +1136,24 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
                 vol.Required("api_key", default=d.get("api_key", "")): str,
                 vol.Optional("radius_km", default=d.get("radius_km", 200)): vol.Coerce(int),
                 vol.Optional("min_magnitude", default=d.get("min_magnitude", 3.0)): vol.Coerce(float),
+            })
+
+        elif etype == ENTRY_SEOUL_BUS:
+            # Options only edit the API key.  Stations/routes are managed by
+            # adding/removing the integration entry — same pattern as transit.
+            return vol.Schema({
+                vol.Required("api_key", default=d.get("api_key", "")): str,
+            })
+
+        elif etype == ENTRY_KAKAO_BUS:
+            # KakaoMap needs no API key.  The only thing worth editing is the
+            # poll interval — stops/routes are restructured via re-adding the
+            # entry.
+            from .kakao_bus import KAKAO_BUS_SCAN_INTERVAL
+            cur = (self._entry.options.get("scan_interval")
+                   or d.get("scan_interval", KAKAO_BUS_SCAN_INTERVAL))
+            return vol.Schema({
+                vol.Optional("scan_interval", default=cur): vol.Coerce(int),
             })
 
         return None

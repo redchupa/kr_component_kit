@@ -21,6 +21,8 @@ ENTRY_PHARMACY = "pharmacy"
 ENTRY_AIRKOREA = "airkorea"
 ENTRY_KMA_WEATHER = "kma_weather"
 ENTRY_EARTHQUAKE = "earthquake"
+ENTRY_SEOUL_BUS = "seoul_bus"
+ENTRY_KAKAO_BUS = "kakao_bus"
 
 # Donation info — surfaced via every device's manufacturer/model/sw_version
 # fields so users browsing the device panel see a small support prompt.

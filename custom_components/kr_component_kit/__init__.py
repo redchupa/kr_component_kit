@@ -20,6 +20,8 @@ PLATFORM_MAP = {
     ENTRY_AIRKOREA: [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.EVENT, Platform.CALENDAR],
     ENTRY_KMA_WEATHER: [Platform.WEATHER],
     ENTRY_EARTHQUAKE: [Platform.EVENT],
+    ENTRY_SEOUL_BUS: [Platform.SENSOR, Platform.BUTTON],
+    ENTRY_KAKAO_BUS: [Platform.SENSOR, Platform.BUTTON],
 }
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -188,6 +190,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         c = EarthquakeCoordinator(hass, api_key)
         await c.async_config_entry_first_refresh()
         store = {"coordinator": c}
+
+    elif etype == ENTRY_SEOUL_BUS:
+        from .seoul_bus.coordinator import SeoulBusCoordinator
+        api_key = entry.data["api_key"]
+        stations = entry.data.get("stations", [])
+        coords: dict[str, SeoulBusCoordinator] = {}
+        for st in stations:
+            c = SeoulBusCoordinator(
+                hass, api_key,
+                ars_id=st["ars_id"],
+                station_name=st.get("station_name") or st["ars_id"],
+                include_routes=st.get("routes") or [],
+            )
+            await c.async_config_entry_first_refresh()
+            coords[st["ars_id"]] = c
+        store = {"coordinators": coords, "stations": stations}
+
+    elif etype == ENTRY_KAKAO_BUS:
+        from .kakao_bus.coordinator import KakaoBusCoordinator
+        from .kakao_bus import KAKAO_BUS_SCAN_INTERVAL
+        scan = entry.options.get("scan_interval",
+                                 entry.data.get("scan_interval",
+                                                KAKAO_BUS_SCAN_INTERVAL))
+        stops = entry.data.get("stops", [])
+        kbus_coords: dict[str, KakaoBusCoordinator] = {}
+        for stop in stops:
+            c = KakaoBusCoordinator(
+                hass,
+                stop_id=stop["stop_id"],
+                stop_name=stop.get("stop_name") or stop["stop_id"],
+                include_routes=stop.get("routes") or [],
+                scan_interval=scan,
+            )
+            await c.async_config_entry_first_refresh()
+            kbus_coords[stop["stop_id"]] = c
+        store = {"coordinators": kbus_coords, "stops": stops}
 
     hass.data[DOMAIN][entry.entry_id] = store
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORM_MAP.get(etype, []))

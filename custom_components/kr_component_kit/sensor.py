@@ -97,5 +97,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry,
             entities.append(UVIndexSensor(c, name))
             entities.append(AirStagnationSensor(c, name))
 
+    elif etype == ENTRY_SEOUL_BUS:
+        from .seoul_bus.sensor import SeoulBusArrivalSensor
+        from .seoul_bus.device import seoul_bus_station_device
+        for st in store.get("stations", []):
+            coord = store["coordinators"].get(st["ars_id"])
+            if not coord:
+                continue
+            di = seoul_bus_station_device(st["ars_id"], st.get("station_name") or st["ars_id"])
+            routes = st.get("routes") or list((coord.data or {}).keys())
+            for rt in routes:
+                for idx in range(2):
+                    entities.append(SeoulBusArrivalSensor(coord, rt, idx, di))
+
+    elif etype == ENTRY_KAKAO_BUS:
+        from .kakao_bus.sensor import KakaoBusArrivalSensor
+        from .kakao_bus.device import kakao_bus_station_device
+        for stop in store.get("stops", []):
+            coord = store["coordinators"].get(stop["stop_id"])
+            if not coord:
+                continue
+            di = kakao_bus_station_device(stop["stop_id"], stop.get("stop_name") or stop["stop_id"])
+            routes = stop.get("routes") or list((coord.data or {}).keys())
+            for rt in routes:
+                for idx in range(2):
+                    entities.append(KakaoBusArrivalSensor(coord, rt, idx, di))
+
     if entities:
         async_add_entities(entities)
