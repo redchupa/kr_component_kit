@@ -286,12 +286,88 @@
   "options": {
     "step": {
       "init": {
-        "title": "Edit Settings"
+        "title": "Edit Settings",
+        "menu_options": {
+          "seoul_bus_opt_add": "🚏 Add Stop",
+          "seoul_bus_opt_remove": "🗑 Remove Stop(s)",
+          "seoul_bus_opt_edit_routes": "🚌 Edit Routes for a Stop",
+          "seoul_bus_opt_edit_key": "🔑 Change API Key",
+          "seoul_bus_opt_done": "✅ Save & Finish",
+          "kakao_bus_opt_add": "🚏 Add Stop",
+          "kakao_bus_opt_remove": "🗑 Remove Stop(s)",
+          "kakao_bus_opt_edit_routes": "🚌 Edit Routes for a Stop",
+          "kakao_bus_opt_edit_interval": "⏱ Change Poll Interval",
+          "kakao_bus_opt_done": "✅ Save & Finish"
+        }
+      },
+      "seoul_bus_opt_add": {
+        "title": "🚏 Seoul Bus — Add Stop",
+        "description": "Enter the **ARS-ID** (e.g. 23288). Leave the name blank to auto-fill from the API.",
+        "data": {
+          "ars_id": "Stop ARS-ID",
+          "station_name": "Stop name (optional)"
+        }
+      },
+      "seoul_bus_opt_add_routes": {
+        "title": "🚌 Seoul Bus — Select Routes for New Stop",
+        "data": { "routes": "Routes to track" }
+      },
+      "seoul_bus_opt_remove": {
+        "title": "🗑 Seoul Bus — Remove Stop(s)",
+        "description": "Pick the stops to remove (multi-select).",
+        "data": { "ars_ids": "Stops to remove" }
+      },
+      "seoul_bus_opt_edit_routes": {
+        "title": "🚌 Seoul Bus — Pick Stop to Edit",
+        "data": { "ars_id": "Stop" }
+      },
+      "seoul_bus_opt_edit_routes_pick": {
+        "title": "🚌 Seoul Bus — Re-select Routes",
+        "data": { "routes": "Routes to track" }
+      },
+      "seoul_bus_opt_edit_key": {
+        "title": "🔑 Seoul Bus — Change API Key",
+        "description": "The new key is validated against the live API before being saved.",
+        "data": { "api_key": "data.go.kr service key" }
+      },
+      "kakao_bus_opt_add": {
+        "title": "🚏 Kakao Bus — Search Stop to Add",
+        "description": "Search by stop name (e.g. Gangnam Station, 사당).",
+        "data": { "stop_name": "Stop name" }
+      },
+      "kakao_bus_opt_add_pick": {
+        "title": "🚏 Kakao Bus — Pick Stop",
+        "data": { "stop_id": "Stop" }
+      },
+      "kakao_bus_opt_add_routes": {
+        "title": "🚌 Kakao Bus — Select Routes for New Stop",
+        "data": { "routes": "Routes to track" }
+      },
+      "kakao_bus_opt_remove": {
+        "title": "🗑 Kakao Bus — Remove Stop(s)",
+        "description": "Pick the stops to remove (multi-select).",
+        "data": { "stop_ids": "Stops to remove" }
+      },
+      "kakao_bus_opt_edit_routes": {
+        "title": "🚌 Kakao Bus — Pick Stop to Edit",
+        "data": { "stop_id": "Stop" }
+      },
+      "kakao_bus_opt_edit_routes_pick": {
+        "title": "🚌 Kakao Bus — Re-select Routes",
+        "data": { "routes": "Routes to track" }
+      },
+      "kakao_bus_opt_edit_interval": {
+        "title": "⏱ Kakao Bus — Change Poll Interval",
+        "description": "How often to poll KakaoMap, in seconds (30–3600).",
+        "data": { "scan_interval": "Poll interval (seconds)" }
       }
     },
     "error": {
       "cannot_connect": "Could not reach the API. ({error})",
-      "invalid_api_key": "API key is not valid."
+      "invalid_api_key": "API key is not valid.",
+      "no_stops_found": "No matching stops.",
+      "no_selection": "Select at least one.",
+      "already_added": "This stop is already registered."
     },
     "abort": {
       "no_options": "No options to configure."

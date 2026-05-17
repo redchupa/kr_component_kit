@@ -1016,35 +1016,429 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         self._entry = config_entry
+        # Working copies used by the menu-driven seoul_bus / kakao_bus
+        # option flows. None until first menu visit; persisted to entry.data
+        # only when the user picks "Save & Exit".
+        self._stations: list[dict] | None = None  # seoul_bus
+        self._stops: list[dict] | None = None  # kakao_bus
+        self._new_api_key: str | None = None  # seoul_bus
+        self._new_scan_interval: int | None = None  # kakao_bus
+        # Per-sub-step scratch space
+        self._opt_sb_ars_id: str | None = None
+        self._opt_sb_station_name: str | None = None
+        self._opt_sb_route_labels: dict | None = None
+        self._opt_kbus_results: dict | None = None
+        self._opt_kbus_stop_id: str | None = None
+        self._opt_kbus_stop_name: str | None = None
+        self._opt_kbus_routes: list | None = None
 
     async def async_step_init(self, user_input=None):
-        """Main options step - show editable fields based on entry type."""
+        """Entry-point step — bus types branch into a menu, others use schema."""
         etype = self._entry.data.get(CONF_ENTRY_TYPE)
-        errors: dict[str, str] = {}
 
+        if etype == ENTRY_SEOUL_BUS:
+            if self._stations is None:
+                self._stations = [dict(s) for s
+                                  in self._entry.data.get("stations", [])]
+                self._new_api_key = self._entry.data.get("api_key", "")
+            return self.async_show_menu(
+                step_id="init",
+                menu_options=[
+                    "seoul_bus_opt_add",
+                    "seoul_bus_opt_remove",
+                    "seoul_bus_opt_edit_routes",
+                    "seoul_bus_opt_edit_key",
+                    "seoul_bus_opt_done",
+                ],
+            )
+
+        if etype == ENTRY_KAKAO_BUS:
+            if self._stops is None:
+                self._stops = [dict(s) for s
+                               in self._entry.data.get("stops", [])]
+                from .kakao_bus import KAKAO_BUS_SCAN_INTERVAL
+                self._new_scan_interval = (
+                    self._entry.options.get("scan_interval")
+                    or self._entry.data.get(
+                        "scan_interval", KAKAO_BUS_SCAN_INTERVAL)
+                )
+            return self.async_show_menu(
+                step_id="init",
+                menu_options=[
+                    "kakao_bus_opt_add",
+                    "kakao_bus_opt_remove",
+                    "kakao_bus_opt_edit_routes",
+                    "kakao_bus_opt_edit_interval",
+                    "kakao_bus_opt_done",
+                ],
+            )
+
+        # Other entry types: classic schema-based flow.
         if user_input is not None:
-            # Entry-type-specific validation before persisting.  Catching
-            # invalid input here is much friendlier than letting the
-            # subsequent reload fail with a cryptic ConfigEntryNotReady.
-            if etype == ENTRY_SEOUL_BUS:
-                from .seoul_bus.api import validate_api_key
-                session = async_get_clientsession(self.hass)
-                err = await validate_api_key(session, user_input["api_key"].strip())
-                if err is not None:
-                    errors["api_key" if err == "invalid_api_key" else "base"] = err
-            if not errors:
-                # Merge new options into data
-                new_data = {**self._entry.data, **user_input}
-                self.hass.config_entries.async_update_entry(
-                    self._entry, data=new_data)
-                return self.async_create_entry(title="", data=user_input)
+            new_data = {**self._entry.data, **user_input}
+            self.hass.config_entries.async_update_entry(
+                self._entry, data=new_data)
+            return self.async_create_entry(title="", data=user_input)
 
         schema = self._build_schema(etype)
         if schema is None:
             return self.async_abort(reason="no_options")
+        return self.async_show_form(step_id="init", data_schema=schema)
 
-        return self.async_show_form(step_id="init", data_schema=schema,
-                                     errors=errors)
+    # ─────────────────────────── 서울버스 옵션 ───────────────────────────
+
+    async def async_step_seoul_bus_opt_add(self, user_input=None):
+        """Add a new station to the working copy."""
+        from .seoul_bus.api import (
+            SeoulBusApiError, build_route_labels, fetch_station)
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            ars_id = user_input["ars_id"].strip()
+            if any(s["ars_id"] == ars_id for s in self._stations):
+                errors["ars_id"] = "already_added"
+            else:
+                session = async_get_clientsession(self.hass)
+                try:
+                    items = await fetch_station(
+                        session, self._new_api_key, ars_id)
+                except SeoulBusApiError as e:
+                    _LOGGER.warning("Seoul Bus station probe failed: %s", e)
+                    errors["ars_id"] = "cannot_connect"
+                    items = []
+                if not errors:
+                    if not items:
+                        errors["ars_id"] = "no_stops_found"
+                    else:
+                        self._opt_sb_ars_id = ars_id
+                        api_name = next(
+                            (it.get("stNm") for it in items if it.get("stNm")),
+                            "")
+                        self._opt_sb_station_name = (
+                            user_input.get("station_name", "").strip()
+                            or api_name
+                            or f"정류장 {ars_id}"
+                        )
+                        self._opt_sb_route_labels = build_route_labels(items)
+                        return await self.async_step_seoul_bus_opt_add_routes()
+        return self.async_show_form(
+            step_id="seoul_bus_opt_add",
+            data_schema=vol.Schema({
+                vol.Required("ars_id"): str,
+                vol.Optional("station_name", default=""): str,
+            }),
+            errors=errors,
+        )
+
+    async def async_step_seoul_bus_opt_add_routes(self, user_input=None):
+        import homeassistant.helpers.config_validation as cv
+        if user_input is not None:
+            self._stations.append({
+                "ars_id": self._opt_sb_ars_id,
+                "station_name": self._opt_sb_station_name,
+                "routes": user_input.get("routes", []),
+            })
+            return await self.async_step_init()
+        labels = self._opt_sb_route_labels or {}
+        return self.async_show_form(
+            step_id="seoul_bus_opt_add_routes",
+            data_schema=vol.Schema({
+                vol.Required("routes", default=list(labels.keys())):
+                    cv.multi_select(labels),
+            }),
+        )
+
+    async def async_step_seoul_bus_opt_remove(self, user_input=None):
+        import homeassistant.helpers.config_validation as cv
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            to_remove = set(user_input.get("ars_ids", []))
+            if not to_remove:
+                errors["base"] = "no_selection"
+            else:
+                self._stations = [s for s in self._stations
+                                  if s["ars_id"] not in to_remove]
+                return await self.async_step_init()
+        if not self._stations:
+            return await self.async_step_init()
+        labels = {
+            s["ars_id"]:
+                f"{s.get('station_name') or s['ars_id']} ({s['ars_id']})"
+            for s in self._stations
+        }
+        return self.async_show_form(
+            step_id="seoul_bus_opt_remove",
+            data_schema=vol.Schema({
+                vol.Required("ars_ids"): cv.multi_select(labels),
+            }),
+            errors=errors,
+        )
+
+    async def async_step_seoul_bus_opt_edit_routes(self, user_input=None):
+        from .seoul_bus.api import (
+            SeoulBusApiError, build_route_labels, fetch_station)
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            ars_id = user_input["ars_id"]
+            session = async_get_clientsession(self.hass)
+            try:
+                items = await fetch_station(
+                    session, self._new_api_key, ars_id)
+            except SeoulBusApiError as e:
+                _LOGGER.warning("Seoul Bus station probe failed: %s", e)
+                errors["base"] = "cannot_connect"
+                items = []
+            if not errors:
+                if not items:
+                    errors["base"] = "no_stops_found"
+                else:
+                    self._opt_sb_ars_id = ars_id
+                    self._opt_sb_route_labels = build_route_labels(items)
+                    return await self.async_step_seoul_bus_opt_edit_routes_pick()
+        if not self._stations:
+            return await self.async_step_init()
+        labels = {
+            s["ars_id"]: s.get("station_name") or s["ars_id"]
+            for s in self._stations
+        }
+        return self.async_show_form(
+            step_id="seoul_bus_opt_edit_routes",
+            data_schema=vol.Schema({vol.Required("ars_id"): vol.In(labels)}),
+            errors=errors,
+        )
+
+    async def async_step_seoul_bus_opt_edit_routes_pick(self, user_input=None):
+        import homeassistant.helpers.config_validation as cv
+        if user_input is not None:
+            for s in self._stations:
+                if s["ars_id"] == self._opt_sb_ars_id:
+                    s["routes"] = user_input.get("routes", [])
+                    break
+            return await self.async_step_init()
+        labels = self._opt_sb_route_labels or {}
+        current = next(
+            (s.get("routes", []) for s in self._stations
+             if s["ars_id"] == self._opt_sb_ars_id),
+            [])
+        return self.async_show_form(
+            step_id="seoul_bus_opt_edit_routes_pick",
+            data_schema=vol.Schema({
+                vol.Required("routes", default=current or list(labels.keys())):
+                    cv.multi_select(labels),
+            }),
+        )
+
+    async def async_step_seoul_bus_opt_edit_key(self, user_input=None):
+        from .seoul_bus.api import validate_api_key
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            new_key = user_input["api_key"].strip()
+            session = async_get_clientsession(self.hass)
+            err = await validate_api_key(session, new_key)
+            if err is None:
+                self._new_api_key = new_key
+                return await self.async_step_init()
+            errors["api_key" if err == "invalid_api_key" else "base"] = err
+        return self.async_show_form(
+            step_id="seoul_bus_opt_edit_key",
+            data_schema=vol.Schema({
+                vol.Required("api_key", default=self._new_api_key or ""): str,
+            }),
+            errors=errors,
+        )
+
+    async def async_step_seoul_bus_opt_done(self, user_input=None):
+        if not self._stations:
+            # Refuse to leave the entry with zero stations — go back to menu.
+            return await self.async_step_init()
+        new_data = {
+            **self._entry.data,
+            "api_key": self._new_api_key,
+            "stations": self._stations,
+        }
+        self.hass.config_entries.async_update_entry(self._entry, data=new_data)
+        return self.async_create_entry(title="", data={})
+
+    # ─────────────────────────── 카카오버스 옵션 ──────────────────────────
+
+    async def async_step_kakao_bus_opt_add(self, user_input=None):
+        from .kakao_bus.api import KakaoBusApiError, search_stops
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            name = user_input["stop_name"].strip()
+            session = async_get_clientsession(self.hass)
+            try:
+                stops = await search_stops(session, name)
+            except KakaoBusApiError as e:
+                _LOGGER.warning("KakaoMap search failed: %s", e)
+                errors["base"] = "cannot_connect"
+                stops = {}
+            if not errors:
+                if not stops:
+                    errors["stop_name"] = "no_stops_found"
+                else:
+                    self._opt_kbus_results = stops
+                    return await self.async_step_kakao_bus_opt_add_pick()
+        return self.async_show_form(
+            step_id="kakao_bus_opt_add",
+            data_schema=vol.Schema({vol.Required("stop_name"): str}),
+            errors=errors,
+        )
+
+    async def async_step_kakao_bus_opt_add_pick(self, user_input=None):
+        from .kakao_bus.api import KakaoBusApiError, fetch_stop_routes
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            stop_id = user_input["stop_id"]
+            if any(s["stop_id"] == stop_id for s in self._stops):
+                errors["base"] = "already_added"
+            else:
+                stop_info = (self._opt_kbus_results or {}).get(stop_id) or {}
+                session = async_get_clientsession(self.hass)
+                try:
+                    routes = await fetch_stop_routes(session, stop_id)
+                except KakaoBusApiError as e:
+                    _LOGGER.warning("KakaoMap stop-routes failed: %s", e)
+                    errors["base"] = "cannot_connect"
+                    routes = []
+                if not errors:
+                    if not routes:
+                        errors["base"] = "no_stops_found"
+                    else:
+                        self._opt_kbus_stop_id = stop_id
+                        self._opt_kbus_stop_name = stop_info.get("title") or stop_id
+                        self._opt_kbus_routes = routes
+                        return await self.async_step_kakao_bus_opt_add_routes()
+        opts = {k: v["title"] for k, v in (self._opt_kbus_results or {}).items()}
+        return self.async_show_form(
+            step_id="kakao_bus_opt_add_pick",
+            data_schema=vol.Schema({vol.Required("stop_id"): vol.In(opts)}),
+            errors=errors,
+        )
+
+    async def async_step_kakao_bus_opt_add_routes(self, user_input=None):
+        import homeassistant.helpers.config_validation as cv
+        if user_input is not None:
+            self._stops.append({
+                "stop_id": self._opt_kbus_stop_id,
+                "stop_name": self._opt_kbus_stop_name,
+                "routes": user_input.get("routes", []),
+            })
+            return await self.async_step_init()
+        labels = {
+            r["number"]: (f"{r['type']} {r['number']}".strip()
+                          if r["type"] else r["number"])
+            for r in (self._opt_kbus_routes or [])
+        }
+        return self.async_show_form(
+            step_id="kakao_bus_opt_add_routes",
+            data_schema=vol.Schema({
+                vol.Required("routes", default=list(labels.keys())):
+                    cv.multi_select(labels),
+            }),
+        )
+
+    async def async_step_kakao_bus_opt_remove(self, user_input=None):
+        import homeassistant.helpers.config_validation as cv
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            to_remove = set(user_input.get("stop_ids", []))
+            if not to_remove:
+                errors["base"] = "no_selection"
+            else:
+                self._stops = [s for s in self._stops
+                               if s["stop_id"] not in to_remove]
+                return await self.async_step_init()
+        if not self._stops:
+            return await self.async_step_init()
+        labels = {s["stop_id"]: s.get("stop_name") or s["stop_id"]
+                  for s in self._stops}
+        return self.async_show_form(
+            step_id="kakao_bus_opt_remove",
+            data_schema=vol.Schema({
+                vol.Required("stop_ids"): cv.multi_select(labels),
+            }),
+            errors=errors,
+        )
+
+    async def async_step_kakao_bus_opt_edit_routes(self, user_input=None):
+        from .kakao_bus.api import KakaoBusApiError, fetch_stop_routes
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            stop_id = user_input["stop_id"]
+            session = async_get_clientsession(self.hass)
+            try:
+                routes = await fetch_stop_routes(session, stop_id)
+            except KakaoBusApiError as e:
+                _LOGGER.warning("KakaoMap stop-routes failed: %s", e)
+                errors["base"] = "cannot_connect"
+                routes = []
+            if not errors:
+                if not routes:
+                    errors["base"] = "no_stops_found"
+                else:
+                    self._opt_kbus_stop_id = stop_id
+                    self._opt_kbus_routes = routes
+                    return await self.async_step_kakao_bus_opt_edit_routes_pick()
+        if not self._stops:
+            return await self.async_step_init()
+        labels = {s["stop_id"]: s.get("stop_name") or s["stop_id"]
+                  for s in self._stops}
+        return self.async_show_form(
+            step_id="kakao_bus_opt_edit_routes",
+            data_schema=vol.Schema({vol.Required("stop_id"): vol.In(labels)}),
+            errors=errors,
+        )
+
+    async def async_step_kakao_bus_opt_edit_routes_pick(self, user_input=None):
+        import homeassistant.helpers.config_validation as cv
+        if user_input is not None:
+            for s in self._stops:
+                if s["stop_id"] == self._opt_kbus_stop_id:
+                    s["routes"] = user_input.get("routes", [])
+                    break
+            return await self.async_step_init()
+        labels = {
+            r["number"]: (f"{r['type']} {r['number']}".strip()
+                          if r["type"] else r["number"])
+            for r in (self._opt_kbus_routes or [])
+        }
+        current = next(
+            (s.get("routes", []) for s in self._stops
+             if s["stop_id"] == self._opt_kbus_stop_id),
+            [])
+        return self.async_show_form(
+            step_id="kakao_bus_opt_edit_routes_pick",
+            data_schema=vol.Schema({
+                vol.Required("routes", default=current or list(labels.keys())):
+                    cv.multi_select(labels),
+            }),
+        )
+
+    async def async_step_kakao_bus_opt_edit_interval(self, user_input=None):
+        from .kakao_bus import KAKAO_BUS_SCAN_INTERVAL
+        if user_input is not None:
+            self._new_scan_interval = user_input["scan_interval"]
+            return await self.async_step_init()
+        return self.async_show_form(
+            step_id="kakao_bus_opt_edit_interval",
+            data_schema=vol.Schema({
+                vol.Required("scan_interval",
+                             default=self._new_scan_interval
+                                     or KAKAO_BUS_SCAN_INTERVAL):
+                    vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
+            }),
+        )
+
+    async def async_step_kakao_bus_opt_done(self, user_input=None):
+        if not self._stops:
+            return await self.async_step_init()
+        new_data = {**self._entry.data, "stops": self._stops}
+        self.hass.config_entries.async_update_entry(self._entry, data=new_data)
+        return self.async_create_entry(
+            title="",
+            data={"scan_interval": self._new_scan_interval}
+                  if self._new_scan_interval else {},
+        )
 
     def _build_schema(self, etype):
         d = self._entry.data
@@ -1155,25 +1549,7 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional("min_magnitude", default=d.get("min_magnitude", 3.0)): vol.Coerce(float),
             })
 
-        elif etype == ENTRY_SEOUL_BUS:
-            # Options only edit the API key.  Stations/routes are managed by
-            # adding/removing the integration entry — same pattern as transit.
-            return vol.Schema({
-                vol.Required("api_key", default=d.get("api_key", "")): str,
-            })
-
-        elif etype == ENTRY_KAKAO_BUS:
-            # KakaoMap needs no API key.  The only thing worth editing is the
-            # poll interval — stops/routes are restructured via re-adding the
-            # entry.  Range 30s..1h: KakaoMap is a public mobile site, so we
-            # cap the floor to be polite, and the ceiling keeps stale-data
-            # fallback bounded.
-            from .kakao_bus import KAKAO_BUS_SCAN_INTERVAL
-            cur = (self._entry.options.get("scan_interval")
-                   or d.get("scan_interval", KAKAO_BUS_SCAN_INTERVAL))
-            return vol.Schema({
-                vol.Optional("scan_interval", default=cur):
-                    vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
-            })
+        # ENTRY_SEOUL_BUS / ENTRY_KAKAO_BUS are handled by their own menu-
+        # driven option flows above; they never reach _build_schema.
 
         return None

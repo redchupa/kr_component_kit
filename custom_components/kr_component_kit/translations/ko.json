@@ -286,8 +286,93 @@
   "options": {
     "step": {
       "init": {
-        "title": "설정 수정"
+        "title": "설정 수정",
+        "menu_options": {
+          "seoul_bus_opt_add": "🚏 정류장 추가",
+          "seoul_bus_opt_remove": "🗑 정류장 삭제",
+          "seoul_bus_opt_edit_routes": "🚌 정류장 노선 편집",
+          "seoul_bus_opt_edit_key": "🔑 API 키 변경",
+          "seoul_bus_opt_done": "✅ 저장 후 종료",
+          "kakao_bus_opt_add": "🚏 정류장 추가",
+          "kakao_bus_opt_remove": "🗑 정류장 삭제",
+          "kakao_bus_opt_edit_routes": "🚌 정류장 노선 편집",
+          "kakao_bus_opt_edit_interval": "⏱ 폴링 주기 변경",
+          "kakao_bus_opt_done": "✅ 저장 후 종료"
+        }
+      },
+      "seoul_bus_opt_add": {
+        "title": "🚏 서울버스 — 정류장 추가",
+        "description": "정류장 **ARS-ID** 를 입력하세요 (예: 23288). 정류장 이름은 비워두면 API 응답에서 자동으로 채워집니다.",
+        "data": {
+          "ars_id": "정류장 ARS-ID",
+          "station_name": "정류장 이름 (선택)"
+        }
+      },
+      "seoul_bus_opt_add_routes": {
+        "title": "🚌 서울버스 — 새 정류장 노선 선택",
+        "description": "이 정류장에서 추적할 노선을 선택하세요.",
+        "data": { "routes": "추적할 노선" }
+      },
+      "seoul_bus_opt_remove": {
+        "title": "🗑 서울버스 — 정류장 삭제",
+        "description": "삭제할 정류장을 선택하세요 (복수 선택 가능).",
+        "data": { "ars_ids": "삭제할 정류장" }
+      },
+      "seoul_bus_opt_edit_routes": {
+        "title": "🚌 서울버스 — 노선을 편집할 정류장 선택",
+        "data": { "ars_id": "정류장" }
+      },
+      "seoul_bus_opt_edit_routes_pick": {
+        "title": "🚌 서울버스 — 노선 재선택",
+        "data": { "routes": "추적할 노선" }
+      },
+      "seoul_bus_opt_edit_key": {
+        "title": "🔑 서울버스 — API 키 변경",
+        "description": "변경한 인증키는 저장 직전에 자동 검증합니다.",
+        "data": { "api_key": "공공데이터포털 서비스 키" }
+      },
+      "kakao_bus_opt_add": {
+        "title": "🚏 카카오버스 — 추가할 정류장 검색",
+        "description": "정류장 이름을 입력하세요 (예: 강남역, 사당).",
+        "data": { "stop_name": "정류장 이름" }
+      },
+      "kakao_bus_opt_add_pick": {
+        "title": "🚏 카카오버스 — 정류장 선택",
+        "data": { "stop_id": "정류장" }
+      },
+      "kakao_bus_opt_add_routes": {
+        "title": "🚌 카카오버스 — 새 정류장 노선 선택",
+        "description": "이 정류장에서 추적할 노선을 선택하세요.",
+        "data": { "routes": "추적할 노선" }
+      },
+      "kakao_bus_opt_remove": {
+        "title": "🗑 카카오버스 — 정류장 삭제",
+        "description": "삭제할 정류장을 선택하세요 (복수 선택 가능).",
+        "data": { "stop_ids": "삭제할 정류장" }
+      },
+      "kakao_bus_opt_edit_routes": {
+        "title": "🚌 카카오버스 — 노선을 편집할 정류장 선택",
+        "data": { "stop_id": "정류장" }
+      },
+      "kakao_bus_opt_edit_routes_pick": {
+        "title": "🚌 카카오버스 — 노선 재선택",
+        "data": { "routes": "추적할 노선" }
+      },
+      "kakao_bus_opt_edit_interval": {
+        "title": "⏱ 카카오버스 — 폴링 주기 변경",
+        "description": "카카오맵 API 호출 주기를 초 단위로 설정합니다 (30~3600초).",
+        "data": { "scan_interval": "폴링 주기 (초)" }
       }
+    },
+    "error": {
+      "cannot_connect": "API에 연결할 수 없습니다. ({error})",
+      "invalid_api_key": "API 키가 유효하지 않습니다.",
+      "no_stops_found": "정류장을 찾을 수 없습니다.",
+      "no_selection": "하나 이상 선택하세요.",
+      "already_added": "이미 등록된 정류장입니다."
+    },
+    "abort": {
+      "no_options": "수정 가능한 옵션이 없습니다."
     }
   },
   "entity": {

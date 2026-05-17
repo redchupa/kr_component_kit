@@ -286,12 +286,88 @@
   "options": {
     "step": {
       "init": {
-        "title": "設定を編集"
+        "title": "設定を編集",
+        "menu_options": {
+          "seoul_bus_opt_add": "🚏 停留所を追加",
+          "seoul_bus_opt_remove": "🗑 停留所を削除",
+          "seoul_bus_opt_edit_routes": "🚌 停留所の路線を編集",
+          "seoul_bus_opt_edit_key": "🔑 APIキーを変更",
+          "seoul_bus_opt_done": "✅ 保存して終了",
+          "kakao_bus_opt_add": "🚏 停留所を追加",
+          "kakao_bus_opt_remove": "🗑 停留所を削除",
+          "kakao_bus_opt_edit_routes": "🚌 停留所の路線を編集",
+          "kakao_bus_opt_edit_interval": "⏱ ポーリング間隔を変更",
+          "kakao_bus_opt_done": "✅ 保存して終了"
+        }
+      },
+      "seoul_bus_opt_add": {
+        "title": "🚏 ソウルバス — 停留所を追加",
+        "description": "停留所 **ARS-ID** を入力してください (例: 23288)。停留所名を空欄にすると API応答から自動入力されます。",
+        "data": {
+          "ars_id": "停留所 ARS-ID",
+          "station_name": "停留所名 (任意)"
+        }
+      },
+      "seoul_bus_opt_add_routes": {
+        "title": "🚌 ソウルバス — 新しい停留所の路線を選択",
+        "data": { "routes": "追跡する路線" }
+      },
+      "seoul_bus_opt_remove": {
+        "title": "🗑 ソウルバス — 停留所を削除",
+        "description": "削除する停留所を選択してください (複数選択可)。",
+        "data": { "ars_ids": "削除する停留所" }
+      },
+      "seoul_bus_opt_edit_routes": {
+        "title": "🚌 ソウルバス — 路線を編集する停留所を選択",
+        "data": { "ars_id": "停留所" }
+      },
+      "seoul_bus_opt_edit_routes_pick": {
+        "title": "🚌 ソウルバス — 路線を再選択",
+        "data": { "routes": "追跡する路線" }
+      },
+      "seoul_bus_opt_edit_key": {
+        "title": "🔑 ソウルバス — APIキーを変更",
+        "description": "変更したキーは保存直前に自動検証されます。",
+        "data": { "api_key": "data.go.kr サービスキー" }
+      },
+      "kakao_bus_opt_add": {
+        "title": "🚏 カカオバス — 追加する停留所を検索",
+        "description": "停留所名を入力してください (例: 江南駅, 사당)。",
+        "data": { "stop_name": "停留所名" }
+      },
+      "kakao_bus_opt_add_pick": {
+        "title": "🚏 カカオバス — 停留所を選択",
+        "data": { "stop_id": "停留所" }
+      },
+      "kakao_bus_opt_add_routes": {
+        "title": "🚌 カカオバス — 新しい停留所の路線を選択",
+        "data": { "routes": "追跡する路線" }
+      },
+      "kakao_bus_opt_remove": {
+        "title": "🗑 カカオバス — 停留所を削除",
+        "description": "削除する停留所を選択してください (複数選択可)。",
+        "data": { "stop_ids": "削除する停留所" }
+      },
+      "kakao_bus_opt_edit_routes": {
+        "title": "🚌 カカオバス — 路線を編集する停留所を選択",
+        "data": { "stop_id": "停留所" }
+      },
+      "kakao_bus_opt_edit_routes_pick": {
+        "title": "🚌 カカオバス — 路線を再選択",
+        "data": { "routes": "追跡する路線" }
+      },
+      "kakao_bus_opt_edit_interval": {
+        "title": "⏱ カカオバス — ポーリング間隔を変更",
+        "description": "カカオマップのポーリング間隔を秒単位で設定します (30〜3600秒)。",
+        "data": { "scan_interval": "ポーリング間隔 (秒)" }
       }
     },
     "error": {
       "cannot_connect": "APIに接続できません。({error})",
-      "invalid_api_key": "APIキーが有効ではありません。"
+      "invalid_api_key": "APIキーが有効ではありません。",
+      "no_stops_found": "該当する停留所がありません。",
+      "no_selection": "1つ以上選択してください。",
+      "already_added": "この停留所は既に登録済みです。"
     },
     "abort": {
       "no_options": "設定可能なオプションがありません。"
