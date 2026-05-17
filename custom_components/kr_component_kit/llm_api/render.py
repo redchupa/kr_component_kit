@@ -1,9 +1,9 @@
 """SVG renderer helpers for kr_component_kit LLM tools.
 
-The voice-satellite card renders ``featured_image`` and
-``results[].image_url`` as ``<img>`` elements, which accept ``data:`` URLs.
-We generate compact SVG tables/cards so the user sees a visual answer in
-addition to the LLM narration.
+Frontend cards render ``featured_image`` and ``results[].image_url`` as
+``<img>`` elements, which accept ``data:`` URLs. We generate compact SVG
+tables/cards so the user sees a visual answer in addition to the LLM
+narration.
 """
 from __future__ import annotations
 
@@ -227,8 +227,8 @@ def grid_results(
     """Build a ``results`` array of SVG-card image entries.
 
     Each item is ``(title, [(label, value), ...], extra_dict_or_None)``.
-    The returned list is suitable for ``toolResult["results"]`` so the
-    voice-satellite card renders a 2-column grid.
+    The returned list is suitable for ``toolResult["results"]`` so a
+    compatible frontend card renders a 2-column grid.
     """
     out: list[dict[str, str]] = []
     for title, lines, extra in items:

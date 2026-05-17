@@ -1,9 +1,9 @@
 """LLM API registration for kr_component_kit services.
 
 One llm.API is registered per added config entry, exposing only the tools
-relevant to that service. The voice-satellite-card-llm-tools result schema
-is used so the voice-satellite card can auto-render compatible payloads
-(e.g. weather forecast).
+relevant to that service. Tool results follow a stable, frontend-friendly
+schema so compatible UI cards can auto-render the payload (e.g. weather
+forecast).
 """
 from __future__ import annotations
 

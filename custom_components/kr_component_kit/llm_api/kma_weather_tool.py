@@ -1,9 +1,9 @@
 """KMA weather forecast LLM tool.
 
-Returns a payload shaped like voice-satellite-card-llm-tools'
-``get_weather_forecast``, so the voice-satellite card renders the
-built-in weather panel (matched by ``toolName.endsWith('get_weather_forecast')
-&& toolResult.forecast``).
+The tool name ends with ``get_weather_forecast`` and the result exposes a
+``forecast`` field, so any frontend card matching that contract
+(``toolName.endsWith('get_weather_forecast') && toolResult.forecast``) can
+auto-render the built-in weather panel.
 """
 from __future__ import annotations
 
@@ -85,10 +85,10 @@ def _resolve_target_date(range_value: str, today):
 
 
 class GetKMAWeatherForecastTool(BaseKRTool):
-    """KMA village forecast packaged as a voice-satellite weather payload."""
+    """KMA village forecast packaged for the frontend weather panel."""
 
     service = ENTRY_KMA_WEATHER
-    source = "kma"  # used by base envelope; voice-satellite ignores the value
+    source = "kma"  # used by base envelope; ignored by the renderer
     name = "get_weather_forecast"
     description = (
         "Get the weather forecast from the Korean Meteorological "
