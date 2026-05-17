@@ -4,12 +4,132 @@
       "user": {
         "title": "サービス選択",
         "menu_options": {
+          "weather_warning": "気象特報 (KMA)",
+          "transit": "公共交通 (地下鉄 / バス)",
+          "fuel": "ガソリン価格 (Opinet)",
+          "school": "学校情報 (NEIS)",
+          "disaster": "災害情報 (緊急災害メッセージ)",
+          "safety_alert": "安全アラート (行政安全部)",
           "kepco": "韓国電力 (KEPCO)",
           "gasapp": "ガスアプリ (韓国ガス公社)",
-          "safety_alert": "安全アラート (行政安全部)",
-          "goodsflow": "グッズフロー (宅配便追跡)",
-          "arisu": "アリス (ソウル市上水道)",
-          "kakaomap": "カカオマップ (交通情報)"
+          "arisu": "アリス (ソウル上水道)",
+          "pharmacy": "薬局営業情報",
+          "airkorea": "エアコリア (大気質)",
+          "kma_weather": "気象庁天気予報",
+          "earthquake": "地震情報",
+          "seoul_bus": "🚌 ソウル市バス (公式API)",
+          "kakao_bus": "🟡 カカオバス (全国, カカオマップ)"
+        }
+      },
+      "weather_warning": {
+        "title": "気象特報",
+        "data": {
+          "api_key": "data.go.kr サービスキー",
+          "area_codes": "対象地域"
+        }
+      },
+      "transit": {
+        "title": "交通 APIキー",
+        "data": {
+          "seoul_api_key": "ソウル オープンデータ認証キー (地下鉄)",
+          "bus_api_key": "data.go.kr サービスキー (バス乗換)"
+        }
+      },
+      "transit_add": {
+        "title": "項目追加",
+        "menu_options": {
+          "transit_subway": "地下鉄駅を追加",
+          "transit_bus_search": "バス停を追加",
+          "transit_done": "完了"
+        }
+      },
+      "transit_subway": {
+        "title": "地下鉄駅",
+        "data": {
+          "station": "駅名",
+          "direction": "方向",
+          "line_id": "路線フィルタ"
+        }
+      },
+      "transit_bus_search": {
+        "title": "バス停を追加",
+        "description": "カカオマップで停留所を検索し、URL の busstopid を入力してください (例: 03171, BS09013700)。",
+        "data": {
+          "kakao_stop_id": "カカオマップ停留所ID"
+        }
+      },
+      "transit_bus_select": {
+        "title": "バス路線を選択",
+        "data": {
+          "buses": "追跡する路線"
+        }
+      },
+      "fuel": {
+        "title": "ガソリン価格設定",
+        "data": {
+          "api_key": "Opinet APIキー",
+          "sido_codes": "地域",
+          "fuel_codes": "油種"
+        }
+      },
+      "school": {
+        "title": "学校情報設定",
+        "data": {
+          "api_key": "NEIS Open APIキー",
+          "school_level": "学校区分"
+        }
+      },
+      "school_search": {
+        "title": "学校検索",
+        "data": {
+          "school_search": "学校名",
+          "selected_school": "学校を選択"
+        }
+      },
+      "school_class": {
+        "title": "学年 / クラスを選択 (複数可)",
+        "data": {
+          "grade_classes": "学年-クラス"
+        }
+      },
+      "school_periods": {
+        "title": "授業時間設定",
+        "data": {
+          "period_1": "1限",
+          "period_2": "2限",
+          "period_3": "3限",
+          "period_4": "4限",
+          "period_5": "5限",
+          "period_6": "6限",
+          "period_7": "7限",
+          "lunch_start": "昼休み開始",
+          "lunch_end": "昼休み終了"
+        }
+      },
+      "disaster": {
+        "title": "災害情報設定",
+        "data": {
+          "api_key": "災害安全データ APIキー",
+          "region_filter": "受信地域 (広域)",
+          "sub_region": "詳細地域 (市郡区, 任意)"
+        }
+      },
+      "safety_alert": {
+        "title": "安全アラート — 1/3: 道府県",
+        "data": {
+          "sido_code": "道府県"
+        }
+      },
+      "safety_alert_sgg": {
+        "title": "安全アラート — 2/3: 市郡区 (未指定で道府県単位)",
+        "data": {
+          "sgg_code": "市郡区"
+        }
+      },
+      "safety_alert_emd": {
+        "title": "安全アラート — 3/3: 邑面洞 (未指定で市郡区単位)",
+        "data": {
+          "emd_code": "邑面洞"
         }
       },
       "kepco": {
@@ -24,91 +144,194 @@
         "data": {
           "token": "トークン",
           "member_id": "会員ID",
-          "use_contract_num": "使用契約番号"
-        }
-      },
-      "safety_alert": {
-        "title": "安全アラート設定 - 道の選択",
-        "description": "安全アラートを受信する道を選択してください。",
-        "data": {
-          "sido_code": "道コード",
-          "sido_name": "道名"
-        }
-      },
-      "safety_alert_sgg": {
-        "title": "安全アラート設定 - 市郡区の選択",
-        "description": "安全アラートを受信する市郡区を選択してください。邑面洞まで細分化したい場合は「邑面洞追加」オプションを選択してください。",
-        "data": {
-          "sgg_code": "市郡区",
-          "sgg_name": "市郡区名",
-          "add_emd": "邑面洞追加"
-        }
-      },
-      "safety_alert_emd": {
-        "title": "安全アラート設定 - 邑面洞の選択",
-        "description": "安全アラートを受信する邑面洞を選択してください。",
-        "data": {
-          "emd_code": "邑面洞",
-          "emd_name": "邑面洞名"
-        }
-      },
-      "goodsflow": {
-        "title": "グッズフロー設定",
-        "data": {
-          "token": "認証トークン"
+          "contract_num": "使用契約番号"
         }
       },
       "arisu": {
         "title": "アリス設定",
         "data": {
-          "customer_number": "顧客番号",
+          "customer_number": "需要家番号",
           "customer_name": "顧客名"
         }
       },
-      "kakaomap": {
-        "title": "カカオマップ設定",
-        "description": "出発地と目的地を設定して交通情報を照会します。",
+      "pharmacy": {
+        "title": "薬局情報 — サービスキーと道府県",
         "data": {
-          "name": "ルート名",
-          "coord_system": "座標系",
-          "start_x": "出発地X座標/経度",
-          "start_y": "出発地Y座標/緯度",
-          "end_x": "目的地X座標/経度",
-          "end_y": "目的地Y座標/緯度"
+          "api_key": "data.go.kr サービスキー",
+          "q0": "道府県"
+        }
+      },
+      "pharmacy_sgg": {
+        "title": "薬局情報 — 市郡区を選択",
+        "data": {
+          "q1": "市郡区"
+        }
+      },
+      "airkorea": {
+        "title": "エアコリア — 広域道府県を選択",
+        "data": {
+          "api_key": "data.go.kr サービスキー (Decoding)",
+          "sido": "広域道府県",
+          "living_api_key": "生活気象指数サービスキー (空欄なら同じキー)"
+        }
+      },
+      "airkorea_select": {
+        "title": "測定所を選択 (複数可)",
+        "data": {
+          "stations": "測定所"
+        }
+      },
+      "kma_weather": {
+        "title": "気象庁天気予報 — 広域道府県",
+        "data": {
+          "api_key": "data.go.kr サービスキー",
+          "sido": "広域道府県"
+        }
+      },
+      "kma_weather_sgg": {
+        "title": "基礎自治体を選択 (複数可)",
+        "data": {
+          "regions": "市郡区",
+          "air_station": "大気質測定所 (O₃ / UV / 体感気温含む)"
+        }
+      },
+      "earthquake": {
+        "title": "地震情報設定",
+        "data": {
+          "api_key": "data.go.kr サービスキー",
+          "latitude": "緯度",
+          "longitude": "経度",
+          "radius_km": "半径 (km)",
+          "min_magnitude": "最小マグニチュード"
+        }
+      },
+      "seoul_bus": {
+        "title": "🚌 ソウルバス — APIキー",
+        "description": "data.go.kr で **정류소정보조회 (停留所情報)** サービスを申請し、発行された認証キーを入力してください。送信時にライブAPIで自動検証します。",
+        "data": {
+          "api_key": "data.go.kr サービスキー"
+        }
+      },
+      "seoul_bus_add": {
+        "title": "🚏 ソウルバス — 停留所追加",
+        "description": "停留所 **ARS-ID** を入力してください (例: 23288)。bus.go.kr または停留所看板で確認できます。\n停留所名を空欄にすると API応答から自動入力されます。",
+        "data": {
+          "ars_id": "停留所 ARS-ID",
+          "station_name": "停留所名 (任意)"
+        }
+      },
+      "seoul_bus_routes": {
+        "title": "🚌 ソウルバス — 路線を選択",
+        "description": "選択した路線ごとに到着センサー2個(次・次の次)が生成されます。",
+        "data": {
+          "routes": "追跡する路線"
+        }
+      },
+      "seoul_bus_menu": {
+        "title": "🚌 ソウルバス — 次のアクション",
+        "menu_options": {
+          "seoul_bus_add": "停留所を追加",
+          "seoul_bus_done": "完了"
+        }
+      },
+      "kakao_bus": {
+        "title": "🟡 カカオバス — 停留所検索",
+        "description": "停留所 **名前** をカカオマップで検索します (例: 江南駅, 사당, 마포구청)。\nAPIキー不要。全国の大部分の停留所に対応。",
+        "data": {
+          "stop_name": "停留所名"
+        }
+      },
+      "kakao_bus_search": {
+        "title": "🟡 カカオバス — 別の停留所を検索",
+        "description": "別の停留所名を入力してください。",
+        "data": {
+          "stop_name": "停留所名"
+        }
+      },
+      "kakao_bus_select_stop": {
+        "title": "🚏 カカオバス — 停留所を選択",
+        "description": "検索結果から停留所を選択してください。",
+        "data": {
+          "stop_id": "停留所"
+        }
+      },
+      "kakao_bus_select_routes": {
+        "title": "🚌 カカオバス — 路線を選択",
+        "description": "選択した路線ごとに到着センサー2個(次・次の次)が生成されます。",
+        "data": {
+          "routes": "追跡する路線"
+        }
+      },
+      "kakao_bus_menu": {
+        "title": "🟡 カカオバス — 次のアクション",
+        "menu_options": {
+          "kakao_bus_search": "停留所を追加",
+          "kakao_bus_done": "完了"
         }
       }
     },
     "error": {
-      "auth": "認証に失敗しました。({error})",
-      "invalid_auth": "ユーザー名またはパスワードが間違っています。({error})",
-      "cannot_connect": "サーバーに接続できません。({error})",
-      "unknown": "不明なエラーが発生しました。({error})",
-      "invalid_coordinates": "無効な座標です。",
-      "invalid_wgs84_coordinates": "無効なWGS84座標です。(経度: 124-132, 緯度: 33-39)",
-      "invalid_wcongnamul_coordinates": "無効なWCONGNAMUL座標です。",
-      "no_regions_available": "利用可能な地域がありません。",
-      "no_sgg_available": "選択した道に利用可能な市郡区がありません。",
-      "no_emd_available": "選択した市郡区に利用可能な邑面洞がありません。"
+      "cannot_connect": "APIに接続できません。({error})",
+      "invalid_api_key": "APIキーが有効ではありません。",
+      "no_schools_found": "該当する学校がありません。",
+      "no_selection": "1つ以上選択してください。",
+      "no_stops_found": "該当する停留所がありません。",
+      "no_stations_found": "測定所が見つかりません。"
     },
     "abort": {
-      "already_configured": "このアカウントは既に設定されています。"
+      "already_configured": "既に設定されています。",
+      "no_options": "設定可能なオプションがありません。"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "オプション",
-        "description": "設定オプションはありません。"
+        "title": "設定を編集"
       }
     },
+    "error": {
+      "cannot_connect": "APIに接続できません。({error})",
+      "invalid_api_key": "APIキーが有効ではありません。"
+    },
     "abort": {
-      "no_options": "設定オプションはありません。",
-      "no_options_kepco": "韓国電力に対する設定オプションはありません。",
-      "no_options_gasapp": "ガスアプリに対する設定オプションはありません。",
-      "no_options_safety_alert": "安全アラートに対する設定オプションはありません。",
-      "no_options_goodsflow": "グッズフローに対する設定オプションはありません。",
-      "no_options_arisu": "アリスに対する設定オプションはありません。",
-      "no_options_kakaomap": "カカオマップに対する設定オプションはありません。"
+      "no_options": "設定可能なオプションがありません。"
+    }
+  },
+  "entity": {
+    "event": {
+      "weather_warning": {
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "advisory": "注意報",
+              "warning": "警報",
+              "pre_advisory": "間もなく注意報",
+              "pre_warning": "間もなく警報",
+              "cancelled": "解除",
+              "none": "なし"
+            }
+          }
+        }
+      }
+    },
+    "sensor": {
+      "school_lunch": {
+        "name": "給食"
+      },
+      "school_info": {
+        "name": "学校情報"
+      },
+      "disaster_message": {
+        "name": "最新災害メッセージ"
+      }
+    },
+    "calendar": {
+      "school_academic": {
+        "name": "学事カレンダー"
+      },
+      "school_class": {
+        "name": "時間割"
+      }
     }
   }
 }

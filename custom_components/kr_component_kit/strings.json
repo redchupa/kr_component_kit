@@ -2,128 +2,134 @@
   "config": {
     "step": {
       "user": {
-        "title": "Service Selection",
+        "title": "Select Service",
         "menu_options": {
-          "weather_warning": "Weather Warning",
-          "transit": "Transit",
-          "fuel": "Fuel Prices",
-          "school": "School Info",
-          "disaster": "Disaster Alerts",
-          "safety_alert": "Safety Alert",
-          "kepco": "KEPCO",
-          "gasapp": "GasApp",
-          "arisu": "Arisu Water",
-          "pharmacy": "Pharmacy",
-          "airkorea": "AirKorea",
-          "kma_weather": "KMA Weather",
-          "earthquake": "Earthquake",
-          "seoul_bus": "Seoul Bus",
-          "kakao_bus": "Kakao Bus"
+          "weather_warning": "Weather Warning (KMA)",
+          "transit": "Public Transit (Subway / Bus)",
+          "fuel": "Fuel Prices (Opinet)",
+          "school": "School Info (NEIS)",
+          "disaster": "Disaster Alerts (긴급재난문자)",
+          "safety_alert": "Safety Alert (MOIS)",
+          "kepco": "KEPCO (Korea Electric Power)",
+          "gasapp": "GasApp (Korea Gas Corp)",
+          "arisu": "Arisu (Seoul Waterworks)",
+          "pharmacy": "Pharmacy Hours",
+          "airkorea": "AirKorea (Air Quality)",
+          "kma_weather": "KMA Weather Forecast",
+          "earthquake": "Earthquake Info",
+          "seoul_bus": "🚌 Seoul Bus (Official API)",
+          "kakao_bus": "🟡 Kakao Bus (Nationwide, KakaoMap)"
         }
       },
       "weather_warning": {
         "title": "Weather Warning",
         "data": {
-          "api_key": "API Key",
+          "api_key": "data.go.kr service key",
           "area_codes": "Areas"
         }
       },
       "transit": {
-        "title": "Transit Keys",
+        "title": "Transit API Keys",
         "data": {
-          "seoul_api_key": "Seoul Key",
-          "bus_api_key": "Bus Key"
+          "seoul_api_key": "Seoul Open Data key (subway)",
+          "bus_api_key": "data.go.kr service key (bus transfer)"
         }
       },
       "transit_add": {
-        "title": "Add",
+        "title": "Add Item",
         "menu_options": {
-          "transit_subway": "Subway",
-          "transit_bus_search": "Bus",
+          "transit_subway": "Add Subway Station",
+          "transit_bus_search": "Add Bus Stop",
           "transit_done": "Done"
         }
       },
       "transit_subway": {
-        "title": "Subway",
+        "title": "Subway Station",
         "data": {
-          "station": "Station",
+          "station": "Station name",
           "direction": "Direction",
-          "line_id": "Line"
+          "line_id": "Line filter"
         }
       },
       "transit_bus_search": {
         "title": "Add Bus Stop",
-        "description": "Enter the KakaoMap bus stop ID",
+        "description": "Search the stop on KakaoMap and paste the `busstopid` from the URL (e.g. 03171, BS09013700).",
         "data": {
-          "kakao_stop_id": "KakaoMap Stop ID"
+          "kakao_stop_id": "KakaoMap stop ID"
+        }
+      },
+      "transit_bus_select": {
+        "title": "Select Bus Routes",
+        "data": {
+          "buses": "Routes to track"
         }
       },
       "fuel": {
-        "title": "Fuel",
+        "title": "Fuel Prices",
         "data": {
-          "api_key": "Key",
+          "api_key": "Opinet API key",
           "sido_codes": "Regions",
-          "fuel_codes": "Types"
+          "fuel_codes": "Fuel types"
         }
       },
       "school": {
-        "title": "School",
+        "title": "School Info",
         "data": {
-          "api_key": "Key",
-          "school_level": "Level"
+          "api_key": "NEIS Open API key",
+          "school_level": "School level"
         }
       },
       "school_search": {
-        "title": "Search",
+        "title": "Search School",
         "data": {
-          "school_search": "Name",
-          "selected_school": "Select"
+          "school_search": "School name",
+          "selected_school": "Select school"
         }
       },
       "school_class": {
-        "title": "Select Grade/Class",
+        "title": "Select Grade / Class (multi-select)",
         "data": {
           "grade_classes": "Grade-Class"
         }
       },
       "school_periods": {
-        "title": "Periods",
+        "title": "Period Times",
         "data": {
-          "period_1": "P1",
-          "period_2": "P2",
-          "period_3": "P3",
-          "period_4": "P4",
-          "period_5": "P5",
-          "period_6": "P6",
-          "period_7": "P7",
-          "lunch_start": "Lunch Start",
-          "lunch_end": "Lunch End"
+          "period_1": "Period 1",
+          "period_2": "Period 2",
+          "period_3": "Period 3",
+          "period_4": "Period 4",
+          "period_5": "Period 5",
+          "period_6": "Period 6",
+          "period_7": "Period 7",
+          "lunch_start": "Lunch start",
+          "lunch_end": "Lunch end"
         }
       },
       "disaster": {
-        "title": "Disaster",
+        "title": "Disaster Alerts",
         "data": {
-          "api_key": "Key",
-          "region_filter": "Region",
-          "sub_region": "Sub-region (optional)"
+          "api_key": "Disaster Safety Data API key",
+          "region_filter": "Region (province)",
+          "sub_region": "Sub-region (city/district, optional)"
         }
       },
       "safety_alert": {
-        "title": "Safety Alert — Step 1/3: Sido",
+        "title": "Safety Alert — Step 1/3: Province",
         "data": {
-          "sido_code": "Sido (province)"
+          "sido_code": "Province"
         }
       },
       "safety_alert_sgg": {
-        "title": "Safety Alert — Step 2/3: Sgg (leave blank for sido-wide)",
+        "title": "Safety Alert — Step 2/3: City/County (leave blank for province-wide)",
         "data": {
-          "sgg_code": "Sgg (city/county/district)"
+          "sgg_code": "City / County"
         }
       },
       "safety_alert_emd": {
-        "title": "Safety Alert — Step 3/3: Emd (leave blank for sgg-wide)",
+        "title": "Safety Alert — Step 3/3: Town/Village (leave blank for city-wide)",
         "data": {
-          "emd_code": "Emd (town/village)"
+          "emd_code": "Town / Village"
         }
       },
       "kepco": {
@@ -137,146 +143,144 @@
         "title": "GasApp",
         "data": {
           "token": "Token",
-          "member_id": "ID",
-          "contract_num": "Contract"
+          "member_id": "Member ID",
+          "contract_num": "Contract number"
         }
       },
       "arisu": {
         "title": "Arisu",
         "data": {
-          "customer_number": "Number",
-          "customer_name": "Name"
+          "customer_number": "Customer number",
+          "customer_name": "Customer name"
         }
       },
       "pharmacy": {
-        "title": "Pharmacy — Service Key & Province",
+        "title": "Pharmacy Hours — Service Key & Province",
         "data": {
-          "api_key": "Service Key",
+          "api_key": "data.go.kr service key",
           "q0": "Province"
         }
       },
       "pharmacy_sgg": {
-        "title": "Pharmacy — Select City/District",
+        "title": "Pharmacy Hours — Select City/District",
         "data": {
-          "q1": "City/District"
-        }
-      },
-      "transit_bus_select": {
-        "title": "Select Bus Routes",
-        "data": {
-          "buses": "Bus Routes"
+          "q1": "City / District"
         }
       },
       "airkorea": {
-        "title": "AirKorea - Province",
+        "title": "AirKorea — Province",
         "data": {
-          "api_key": "Key",
+          "api_key": "data.go.kr service key (decoded)",
           "sido": "Province",
-          "living_api_key": "Living Index API Key (blank = same)"
+          "living_api_key": "Living-index service key (blank = reuse above)"
         }
       },
       "airkorea_select": {
-        "title": "Select Stations",
+        "title": "Select Stations (multi-select)",
         "data": {
           "stations": "Stations"
         }
       },
       "kma_weather": {
-        "title": "KMA Weather - Province",
+        "title": "KMA Weather Forecast — Province",
         "data": {
-          "api_key": "Key",
+          "api_key": "data.go.kr service key",
           "sido": "Province"
         }
       },
-      "earthquake": {
-        "title": "Earthquake",
-        "data": {
-          "api_key": "Key",
-          "latitude": "Lat",
-          "longitude": "Lon",
-          "radius_km": "Radius",
-          "min_magnitude": "Min Magnitude"
-        }
-      },
       "kma_weather_sgg": {
-        "title": "Select Districts",
+        "title": "Select Districts (multi-select)",
         "data": {
           "regions": "Districts",
-          "air_station": "Air Station (O₃/UV)"
+          "air_station": "Air quality station (O₃ / UV / feels-like included)"
+        }
+      },
+      "earthquake": {
+        "title": "Earthquake Info",
+        "data": {
+          "api_key": "data.go.kr service key",
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "radius_km": "Radius (km)",
+          "min_magnitude": "Minimum magnitude"
         }
       },
       "seoul_bus": {
-        "title": "Seoul Bus — Service Key",
-        "description": "Issued at data.go.kr (정류소정보조회).",
+        "title": "🚌 Seoul Bus — API Key",
+        "description": "Apply for the **정류소정보조회 (Bus Stop Info)** service on data.go.kr and paste the issued service key. Validated against the live API on submit.",
         "data": {
-          "api_key": "Service Key"
+          "api_key": "data.go.kr service key"
         }
       },
       "seoul_bus_add": {
-        "title": "Seoul Bus — Add Station",
-        "description": "Enter the ARS-ID (e.g. 23288). Look it up at bus.go.kr.",
+        "title": "🚏 Seoul Bus — Add Stop",
+        "description": "Enter the stop **ARS-ID** (e.g. 23288). Look it up at bus.go.kr or on the physical stop sign.\nLeave the name blank to auto-fill from the API response.",
         "data": {
-          "ars_id": "ARS-ID",
-          "station_name": "Station Name (optional)"
+          "ars_id": "Stop ARS-ID",
+          "station_name": "Stop name (optional)"
         }
       },
       "seoul_bus_routes": {
-        "title": "Seoul Bus — Select Routes",
+        "title": "🚌 Seoul Bus — Select Routes",
+        "description": "Each selected route gets two arrival sensors (next + after).",
         "data": {
-          "routes": "Bus Routes"
+          "routes": "Routes to track"
         }
       },
       "seoul_bus_menu": {
-        "title": "Seoul Bus",
+        "title": "🚌 Seoul Bus — Next Action",
         "menu_options": {
-          "seoul_bus_add": "Add Another Station",
-          "seoul_bus_done": "Done"
+          "seoul_bus_add": "Add another stop",
+          "seoul_bus_done": "Finish"
         }
       },
       "kakao_bus": {
-        "title": "Kakao Bus — Search Stop",
-        "description": "Search a bus stop by name (KakaoMap).",
+        "title": "🟡 Kakao Bus — Search Stop",
+        "description": "Search by stop **name** on KakaoMap (e.g. Gangnam Station, 사당, 마포구청).\nNo API key required; works for most stops nationwide.",
         "data": {
-          "stop_name": "Bus Stop Name"
+          "stop_name": "Stop name"
         }
       },
       "kakao_bus_search": {
-        "title": "Kakao Bus — Search Another Stop",
+        "title": "🟡 Kakao Bus — Search Another Stop",
+        "description": "Enter another stop name.",
         "data": {
-          "stop_name": "Bus Stop Name"
+          "stop_name": "Stop name"
         }
       },
       "kakao_bus_select_stop": {
-        "title": "Kakao Bus — Pick a Stop",
+        "title": "🚏 Kakao Bus — Pick a Stop",
+        "description": "Choose the stop from the search results.",
         "data": {
-          "stop_id": "Bus Stop"
+          "stop_id": "Stop"
         }
       },
       "kakao_bus_select_routes": {
-        "title": "Kakao Bus — Select Routes",
+        "title": "🚌 Kakao Bus — Select Routes",
+        "description": "Each selected route gets two arrival sensors (next + after).",
         "data": {
-          "routes": "Bus Routes"
+          "routes": "Routes to track"
         }
       },
       "kakao_bus_menu": {
-        "title": "Kakao Bus",
+        "title": "🟡 Kakao Bus — Next Action",
         "menu_options": {
-          "kakao_bus_search": "Add Another Stop",
-          "kakao_bus_done": "Done"
+          "kakao_bus_search": "Add another stop",
+          "kakao_bus_done": "Finish"
         }
       }
     },
     "error": {
-      "cannot_connect": "Cannot connect.",
-      "invalid_api_key": "Invalid key.",
-      "no_schools_found": "No schools.",
-      "no_selection": "Select one.",
-      "no_stops_found": "No stops.",
+      "cannot_connect": "Could not reach the API. ({error})",
+      "invalid_api_key": "API key is not valid.",
+      "no_schools_found": "No matching schools.",
+      "no_selection": "Select at least one.",
+      "no_stops_found": "No matching stops.",
       "no_stations_found": "No stations found."
     },
     "abort": {
       "already_configured": "Already configured.",
-      "no_options": "No options available."
+      "no_options": "No options to configure."
     }
   },
   "options": {
@@ -284,6 +288,13 @@
       "init": {
         "title": "Edit Settings"
       }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the API. ({error})",
+      "invalid_api_key": "API key is not valid."
+    },
+    "abort": {
+      "no_options": "No options to configure."
     }
   },
   "entity": {
@@ -308,18 +319,18 @@
         "name": "Lunch"
       },
       "school_info": {
-        "name": "Info"
+        "name": "School info"
       },
       "disaster_message": {
-        "name": "Alert"
+        "name": "Latest disaster message"
       }
     },
     "calendar": {
       "school_academic": {
-        "name": "Events"
+        "name": "Academic schedule"
       },
       "school_class": {
-        "name": "Schedule"
+        "name": "Class schedule"
       }
     }
   }

@@ -106,17 +106,29 @@ def build_route_labels(items: list[dict[str, Any]]) -> dict[str, str]:
 
 
 async def validate_api_key(
-    session: aiohttp.ClientSession, api_key: str, sample_ars: str = "23288",
-) -> bool:
-    """Probe API key with a known-valid ARS-ID (default: 사당역 정류장).
+    session: aiohttp.ClientSession, api_key: str,
+) -> str | None:
+    """Probe the API with the given key. Returns None on success, or one of
+    `"invalid_api_key"` / `"cannot_connect"` on failure.
 
-    Returns True if the API accepts the key (any non-error response).  We
-    don't require the station to actually have buses — we just want to know
-    that auth passed.
+    Uses a deliberately non-existent ARS-ID ("00000"); a valid key returns a
+    successful response with an empty `itemList`, while an invalid key
+    surfaces an authentication-class error in `errMsg`.  This avoids
+    depending on any specific real station staying online.
     """
     try:
-        await fetch_station(session, api_key, sample_ars)
-        return True
+        await fetch_station(session, api_key, "00000")
+        return None
     except SeoulBusApiError as e:
-        _LOGGER.warning("Seoul Bus API key validation failed: %s", e)
-        return False
+        msg = str(e).upper()
+        # data.go.kr auth-class error codes — narrow allow-list, anything
+        # else (timeout, 5xx, DNS) is treated as a transient connection
+        # problem so the user gets accurate guidance.
+        if any(kw in msg for kw in (
+            "SERVICE_KEY", "SERVICEKEY", "AUTH",
+            "REGISTER", "NOT_REGISTERED", "EXPIRED",
+        )):
+            _LOGGER.warning("Seoul Bus auth check failed: %s", e)
+            return "invalid_api_key"
+        _LOGGER.warning("Seoul Bus connectivity check failed: %s", e)
+        return "cannot_connect"

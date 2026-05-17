@@ -32,10 +32,18 @@ def _arrival_headers(stop_id: str) -> dict[str, str]:
             "X-Requested-With": "XMLHttpRequest"}
 
 
+SEARCH_RESULTS_LIMIT = 50
+
+
 async def search_stops(
     session: aiohttp.ClientSession, name: str,
 ) -> dict[str, dict[str, Any]]:
     """Search bus stops by name.  Returns {stop_id: stop_info}.
+
+    Results are capped at `SEARCH_RESULTS_LIMIT` items so the config-flow
+    dropdown stays usable — KakaoMap can return hundreds of matches for
+    common names like "강남".  KakaoMap appears to order by relevance, so
+    the cap keeps the most relevant matches.
 
     `stop_info` keys: stop_number, direction, location, bus_types, title.
     """
@@ -90,6 +98,8 @@ async def search_stops(
                 "bus_types": bus_types,
                 "title": f"{data_title}({stop_number}) - {direction}",
             }
+            if len(results) >= SEARCH_RESULTS_LIMIT:
+                break
     return results
 
 

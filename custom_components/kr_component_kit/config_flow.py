@@ -798,19 +798,19 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             api_key = user_input["api_key"].strip()
             session = async_get_clientsession(self.hass)
-            if await validate_api_key(session, api_key):
+            err = await validate_api_key(session, api_key)
+            if err is None:
                 self._data = {CONF_ENTRY_TYPE: ENTRY_SEOUL_BUS,
                               "api_key": api_key,
                               "stations": []}
                 return await self.async_step_seoul_bus_add()
-            errors["api_key"] = "invalid_api_key"
+            # `invalid_api_key` is field-level; `cannot_connect` is form-level
+            # so the message lands above the form, not under the key field.
+            errors["api_key" if err == "invalid_api_key" else "base"] = err
         return self.async_show_form(
             step_id="seoul_bus",
             data_schema=vol.Schema({vol.Required("api_key"): str}),
             errors=errors,
-            description_placeholders={
-                "api_key_desc": "공공데이터포털(data.go.kr) > 정류소정보조회 인증키",
-            },
         )
 
     async def async_step_seoul_bus_add(self, user_input=None) -> FlowResult:
@@ -832,9 +832,16 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["ars_id"] = "no_stops_found"
                 else:
                     self._sb_ars_id = ars_id
+                    # Pick the first non-empty `stNm` across items rather than
+                    # blindly trusting items[0] — defensive against carriers
+                    # occasionally returning the station name on later rows.
+                    api_station_name = next(
+                        (it.get("stNm") for it in items if it.get("stNm")),
+                        "",
+                    )
                     self._sb_station_name = (
                         user_input.get("station_name", "").strip()
-                        or items[0].get("stNm")
+                        or api_station_name
                         or f"정류장 {ars_id}"
                     )
                     self._sb_route_labels = build_route_labels(items)
@@ -846,9 +853,6 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional("station_name", default=""): str,
             }),
             errors=errors,
-            description_placeholders={
-                "ars_id_desc": "정류장 ARS-ID (예: 23288). bus.go.kr 에서 조회",
-            },
         )
 
     async def async_step_seoul_bus_routes(self, user_input=None) -> FlowResult:
@@ -1016,18 +1020,31 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         """Main options step - show editable fields based on entry type."""
         etype = self._entry.data.get(CONF_ENTRY_TYPE)
+        errors: dict[str, str] = {}
 
         if user_input is not None:
-            # Merge new options into data
-            new_data = {**self._entry.data, **user_input}
-            self.hass.config_entries.async_update_entry(self._entry, data=new_data)
-            return self.async_create_entry(title="", data=user_input)
+            # Entry-type-specific validation before persisting.  Catching
+            # invalid input here is much friendlier than letting the
+            # subsequent reload fail with a cryptic ConfigEntryNotReady.
+            if etype == ENTRY_SEOUL_BUS:
+                from .seoul_bus.api import validate_api_key
+                session = async_get_clientsession(self.hass)
+                err = await validate_api_key(session, user_input["api_key"].strip())
+                if err is not None:
+                    errors["api_key" if err == "invalid_api_key" else "base"] = err
+            if not errors:
+                # Merge new options into data
+                new_data = {**self._entry.data, **user_input}
+                self.hass.config_entries.async_update_entry(
+                    self._entry, data=new_data)
+                return self.async_create_entry(title="", data=user_input)
 
         schema = self._build_schema(etype)
         if schema is None:
             return self.async_abort(reason="no_options")
 
-        return self.async_show_form(step_id="init", data_schema=schema)
+        return self.async_show_form(step_id="init", data_schema=schema,
+                                     errors=errors)
 
     def _build_schema(self, etype):
         d = self._entry.data
@@ -1148,12 +1165,15 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
         elif etype == ENTRY_KAKAO_BUS:
             # KakaoMap needs no API key.  The only thing worth editing is the
             # poll interval — stops/routes are restructured via re-adding the
-            # entry.
+            # entry.  Range 30s..1h: KakaoMap is a public mobile site, so we
+            # cap the floor to be polite, and the ceiling keeps stale-data
+            # fallback bounded.
             from .kakao_bus import KAKAO_BUS_SCAN_INTERVAL
             cur = (self._entry.options.get("scan_interval")
                    or d.get("scan_interval", KAKAO_BUS_SCAN_INTERVAL))
             return vol.Schema({
-                vol.Optional("scan_interval", default=cur): vol.Coerce(int),
+                vol.Optional("scan_interval", default=cur):
+                    vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
             })
 
         return None
