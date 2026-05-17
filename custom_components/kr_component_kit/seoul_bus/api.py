@@ -203,17 +203,30 @@ async def validate_api_key(
         return None
     except SeoulBusApiError as e:
         msg = str(e).upper()
-        # data.go.kr gateway-class rejections (key never reached the
-        # Seoul backend).  The portal sometimes takes up to ~1h to
-        # activate a freshly-issued key.
+        # data.go.kr returns auth-class messages in MULTIPLE shapes:
+        # spaced ("SERVICE KEY IS NOT REGISTERED"), underscored
+        # ("SERVICE_KEY_IS_NOT_REGISTERED"), and Korean ("Key인증실패").
+        # The list below was assembled after probing the live API with
+        # an unactivated key — both forms were observed.  Freshly-issued
+        # data.go.kr keys can take up to ~1h to activate, which the
+        # invalid_api_key UI message points users toward.
         if any(kw in msg for kw in (
+            "SERVICE KEY IS NOT REGISTERED",
             "SERVICE_KEY_IS_NOT_REGISTERED",
+            "SERVICEKEY IS NOT REGISTERED",
             "SERVICEKEY_IS_NOT_REGISTERED",
             "REGISTERED_SERVICEKEY",
+            "REGISTERED SERVICEKEY",
             "SERVICE_KEY_ERROR",
+            "SERVICE KEY ERROR",
             "DEADLINE_HAS_EXPIRED",
+            "DEADLINE HAS EXPIRED",
             "UNAUTHORIZED",
             "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS",
+            "LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS",
+            "인증실패",
+            "인증 실패",
+            "키인증",
         )):
             _LOGGER.warning("Seoul Bus auth check failed: %s", e)
             return "invalid_api_key"
