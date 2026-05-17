@@ -111,24 +111,30 @@ async def validate_api_key(
     """Probe the API with the given key. Returns None on success, or one of
     `"invalid_api_key"` / `"cannot_connect"` on failure.
 
-    Uses a deliberately non-existent ARS-ID ("00000"); a valid key returns a
-    successful response with an empty `itemList`, while an invalid key
-    surfaces an authentication-class error in `errMsg`.  This avoids
-    depending on any specific real station staying online.
+    We use a non-existent ARS-ID ("00000"); a valid key reaches the API and
+    returns either an empty `itemList` (success) or an auth-class `errMsg`
+    when the key is invalid.
+
+    The auth-class allow-list is intentionally **narrow**: we only flag a
+    key as bad when the error message explicitly mentions the service key
+    or registration.  Anything else — timeouts, 5xx, parameter validation
+    errors, DNS, "unknown" — is treated as a transient connection problem
+    so a genuinely-good key isn't rejected because of a fluky probe.
     """
     try:
         await fetch_station(session, api_key, "00000")
         return None
     except SeoulBusApiError as e:
         msg = str(e).upper()
-        # data.go.kr auth-class error codes — narrow allow-list, anything
-        # else (timeout, 5xx, DNS) is treated as a transient connection
-        # problem so the user gets accurate guidance.
         if any(kw in msg for kw in (
-            "SERVICE_KEY", "SERVICEKEY", "AUTH",
-            "REGISTER", "NOT_REGISTERED", "EXPIRED",
+            "SERVICE_KEY_IS_NOT_REGISTERED",
+            "SERVICEKEY_IS_NOT_REGISTERED",
+            "REGISTERED_SERVICEKEY",
+            "SERVICE_KEY_ERROR",
+            "DEADLINE_HAS_EXPIRED",
+            "UNAUTHORIZED",
         )):
             _LOGGER.warning("Seoul Bus auth check failed: %s", e)
             return "invalid_api_key"
-        _LOGGER.warning("Seoul Bus connectivity check failed: %s", e)
+        _LOGGER.warning("Seoul Bus probe couldn't reach API: %s", e)
         return "cannot_connect"

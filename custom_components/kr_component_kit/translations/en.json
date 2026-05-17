@@ -370,7 +370,9 @@
       "already_added": "This stop is already registered."
     },
     "abort": {
-      "no_options": "No options to configure."
+      "no_options": "No options to configure.",
+      "no_stations": "Cannot save: at least one stop must remain. Add a stop first, or remove the integration entry instead.",
+      "no_stops": "Cannot save: at least one stop must remain. Add a stop first, or remove the integration entry instead."
     }
   },
   "entity": {

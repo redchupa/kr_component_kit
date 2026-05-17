@@ -1,6 +1,6 @@
 # 🇰🇷 KR Component Kit
 
-> **A Home Assistant integration for Korean residents** — KEPCO electricity, Seoul water, city gas, KMA weather, government disaster alerts, pharmacy info, school meals, real-time public transit, air quality, fuel prices, and earthquake warnings — 13 Korea-only public services bundled in one package.
+> **A Home Assistant integration for Korean residents** — KEPCO electricity, Seoul water, city gas, KMA weather, government disaster alerts, pharmacy info, school meals, real-time public transit + dedicated Seoul Bus + nationwide bus, air quality, fuel prices, and earthquake warnings — 15 Korea-only public services bundled in one package.
 
 🇰🇷 [한국어 README](README.md) · 🇬🇧 **English (this page)**
 
@@ -18,7 +18,7 @@
 
 Korean public services don't have a standard OpenAPI surface like utilities elsewhere. Each agency runs its own portal (`data.go.kr`, `safetydata.go.kr`, `opinet.co.kr`, `open.neis.go.kr`, `data.seoul.go.kr`), with its own signup, its own dataset-by-dataset 활용신청 (use application), and its own quirks.
 
-This integration wraps the 13 most useful Korea-only services into one Home Assistant integration, with a unified config flow, native HA entities (sensors, weather, event, calendar), and an optional LLM tool surface for natural-Korean voice queries.
+This integration wraps the 15 most useful Korea-only services into one Home Assistant integration, with a unified config flow, native HA entities (sensors, weather, event, calendar, button), and an optional LLM tool surface for natural-Korean voice queries.
 
 **Who this is for:**
 - Korean residents (citizens, expats, or international residents) running Home Assistant
@@ -47,11 +47,11 @@ Click the **`MY` HACS badge** at the top — your Home Assistant opens automatic
 
 ### Step 4. Add more services
 
-When ready, follow the [🔑 API Key Guide](#-api-key-guide) below to add the other 12 services one by one.
+When ready, follow the [🔑 API Key Guide](#-api-key-guide) below to add the other 14 services one by one.
 
 ---
 
-## 📋 The 13 services at a glance
+## 📋 The 15 services at a glance
 
 | Service | Category | API key | Notes |
 |---|---|---|---|
@@ -67,7 +67,9 @@ When ready, follow the [🔑 API Key Guide](#-api-key-guide) below to add the ot
 | 🏠 **GasApp** (가스앱) | Utility | ❌ (mobile-app token) | Packet capture required (advanced) |
 | ⛽ **Fuel** (유가) | Living | ✅ opinet.co.kr | Province-level avg / lowest-price stations |
 | 🏫 **School** (학교) | Living | ✅ open.neis.go.kr | Lunch menu, schedule, calendar |
-| 🚌 **Transit** (대중교통) | Living | Partial | Subway: Seoul key / Bus: no key (KakaoMap) |
+| 🚌 **Transit** (대중교통) | Living | Partial | Subway (Seoul) + bus by KakaoMap stop-ID. Single integration entry for both |
+| 🚌 **Seoul Bus** (서울버스) | Living | ✅ data.go.kr | Official Seoul Bus API (ARS-ID). Per-stop refresh button + add/remove stops in options |
+| 🚍 **Korea Bus** (한국 버스) | Living | ❌ none | KakaoMap nationwide, **search by stop name**, configurable poll interval |
 
 > 💡 **All services are free.** Korean public APIs are gratis; this integration adds no payment of its own.
 

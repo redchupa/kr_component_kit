@@ -1,6 +1,6 @@
 # 🇰🇷 KR Component Kit
 
-> **한국 거주자를 위한 Home Assistant 통합** — 전기·수도·가스·날씨·재난·약국·학교 급식·실시간 대중교통까지, 한국에서만 쓸 수 있는 13가지 공공 서비스를 한 패키지로.
+> **한국 거주자를 위한 Home Assistant 통합** — 전기·수도·가스·날씨·재난·약국·학교 급식·실시간 대중교통까지, 한국에서만 쓸 수 있는 15가지 공공 서비스를 한 패키지로.
 
 🇰🇷 **한국어 (이 페이지)** · 🇬🇧 [English README](README.en.md)
 
@@ -15,7 +15,7 @@
 <details>
 <summary>🇬🇧 <b>English summary</b></summary>
 
-A Home Assistant custom integration for Korean residents and expats. Exposes 13 Korea-only public services (KEPCO electricity, Seoul water, city gas, KMA weather, disaster alerts, NMC pharmacy, NEIS school meals, Seoul subway + KakaoMap bus, AirKorea air quality, Opinet fuel prices, earthquake warnings) as native HA entities — sensors, weather entities, events, calendars.
+A Home Assistant custom integration for Korean residents and expats. Exposes 15 Korea-only public services (KEPCO electricity, Seoul water, city gas, KMA weather, disaster alerts, NMC pharmacy, NEIS school meals, Seoul subway + Seoul Bus official API + nationwide bus via KakaoMap, AirKorea air quality, Opinet fuel prices, earthquake warnings) as native HA entities — sensors, weather entities, events, calendars.
 
 All Korean public APIs are free; service keys are obtained from `data.go.kr`, `safetydata.go.kr`, `opinet.co.kr`, `open.neis.go.kr`, and `data.seoul.go.kr` — guides below link directly to each portal's search page.
 
@@ -48,7 +48,7 @@ Optional LLM integration lets you ask in natural Korean ("지금 미세먼지 �
 
 ---
 
-## 📋 13가지 서비스 한눈에
+## 📋 15가지 서비스 한눈에
 
 | 서비스 | 카테고리 | API 키 | 비고 |
 |---|---|---|---|
@@ -65,6 +65,8 @@ Optional LLM integration lets you ask in natural Korean ("지금 미세먼지 �
 | ⛽ **유가 (Opinet)** | 생활 | ✅ opinet.co.kr | 시도별 평균/최저가 |
 | 🏫 **학교 (NEIS)** | 생활 | ✅ open.neis.go.kr | 급식·시간표·학사일정 |
 | 🚌 **대중교통** | 생활 | 부분 | 지하철: 서울 키 / 버스: 키 불필요 (카카오맵) |
+| 🚌 **서울버스 (공식 API)** | 생활 | ✅ data.go.kr | ARS-ID 단위 도착정보 + 옵션에서 정류장 추가/제거 |
+| 🚍 **한국 버스 (전국)** | 생활 | ❌ 불필요 | 카카오맵 모바일 — 정류장 **이름 검색** UI, 전국 |
 
 > 💡 **핵심**: 모든 서비스는 **무료** 정부·공공기관 OpenAPI를 사용합니다. 결제·과금 일절 없음.
 
@@ -229,18 +231,26 @@ curl -s https://api.ipify.org
 
 ---
 
-### 🚌 대중교통 — 시나리오별 키
+### 🚌 대중교통 / 서울버스 / 한국 버스 — 무엇을 고를까?
 
-본인이 쓸 기능에 따라 필요한 키가 다릅니다.
+버스/지하철 관련해 메뉴에 **세 가지 항목**이 보입니다. 시나리오별 정리:
 
-| 시나리오 | 필요한 키 | 발급처 |
-|---|---|---|
-| 지하철 도착정보 | 서울 열린데이터광장 키 | [👉 data.seoul.go.kr](https://data.seoul.go.kr) → `지하철 실시간 도착정보` 신청 |
-| 버스 도착정보 | **❌ 불필요** | 카카오맵 비공식 endpoint 사용. 정류장 ID만 입력 |
-| 환승경로 검색 (옵션) | 서울시 환승경로 API 키 | [👉 data.go.kr](https://www.data.go.kr/tcs/dss/selectDataSetList.do?searchKeyword=대중교통환승경로) → `대중교통환승경로` |
+| 메뉴 | 데이터 소스 | API 키 | 특징 | 추천 사용자 |
+|---|---|---|---|---|
+| 🚌 **대중교통 (지하철 / 버스)** | 서울 열린데이터광장 (지하철) + 카카오맵 (버스) | 지하철은 ✅, 버스는 ❌ | 한 통합에 지하철역 + 버스정류장 혼합 등록. 환승경로 옵션 키도 지원 | 지하철·버스 모두 쓰는 서울/수도권 사용자 |
+| 🚌 **서울버스 (공식 API)** | 서울특별시 정류소정보조회 API (ws.bus.go.kr) | ✅ data.go.kr | 공식 API 기반 가장 정확. ARS-ID 입력 → 자동으로 노선 목록 조회. 정류장당 새로고침 버튼 + 옵션에서 정류장 추가/제거/노선 편집 | 서울만 다니고 공식 API 안정성을 원하는 사용자 |
+| 🚍 **한국 버스 (전국)** | 카카오맵 모바일 | ❌ 불필요 | 정류장 **이름 검색** UI. 전국 대부분 정류장. 옵션에서 폴링 주기 변경 (30s~1h) | 키 발급이 부담스럽거나, 서울 외 지역 사용자 |
 
-**카카오맵 정류장 ID 찾는 법** *(버스 등록 시)*:
+**서울버스 / 한국 버스 — 무엇이 다른가?**
+
+- 같은 정류장이라도 데이터 소스가 다르면 응답이 약간 다를 수 있습니다 (예: "곧 도착" vs "1분 후"). 서울버스는 공식 API라 가장 정확, 한국 버스는 카카오맵 모바일 사이트라 사이트 개편 시 일시 깨질 위험.
+- 두 통합을 **동시에** 등록해도 무방 (서로 독립). 비교용으로 쓰시는 분도 있습니다.
+
+**카카오맵 정류장 ID 찾는 법** *("대중교통" 메뉴의 버스 등록 시. "한국 버스"는 이름 검색이라 ID 불필요)*:
 [카카오맵](https://map.kakao.com) → 정류장 검색 → 정류장 클릭 → URL `?busstopid=03171&...` → **`busstopid=` 뒤의 값** 복사 (예: `03171`, `BS09013700`).
+
+**서울버스 ARS-ID 찾는 법** *("서울버스" 메뉴 등록 시)*:
+[bus.go.kr](https://bus.go.kr) 또는 정류장 표지판에 적힌 5자리 정류소번호 (예: `23288` = 사당역).
 
 ---
 
@@ -284,6 +294,8 @@ curl -s https://api.ipify.org
 | ⛽ 유가 | `전국 평균가`, `최저가` (등록한 시도×유종 조합마다) | `ranking[]` (Top 5 주유소 이름·가격·주소) |
 | 🏫 학교 | `급식`, `학교 정보` + calendar 학사일정/시간표 | 급식: `menu`, `calorie`, `allergy_codes` |
 | 🚌 대중교통 | `<역/정류장> ... 도착` (TIMESTAMP — HA가 "N분 후"로 자동 표시) | — |
+| 🚌 서울버스 | 노선당 도착 sensor 2개 (`<rtNm> 다음`, `<rtNm> 다다음`, TIMESTAMP) + 정류장당 새로고침 버튼 1개 | `vehicle_number`, `current_stop`, `message`, `remain_seat`, `direction`, `bus_type`, `status` ("곧 도착", "N분 후") |
+| 🚍 한국 버스 | 노선당 도착 sensor 2개 (`<번호> 다음`, `<번호> 다다음`, TIMESTAMP) + 정류장당 새로고침 버튼 1개 | `vehicle_number`, `current_stop`, `message`, `remain_seat`, `next_stop`, `first_time`/`last_time`/`intervals`, `bus_type`, `status` |
 
 ---
 
@@ -467,7 +479,8 @@ HACS로 설치하셨다면 새 릴리즈 시 **HACS → 통합 → KR Component 
 
 | 카테고리 | 서비스 | 주기 |
 |---|---|---|
-| 실시간 | 버스/지하철 | 1~2분 |
+| 실시간 | 버스/지하철 (대중교통 메뉴) | 1~2분 |
+| 실시간 | 서울버스 / 한국 버스 | 1분 (서울버스 고정) / 30s~1h 조정 가능 (한국 버스) |
 | 안전·재난 | 재난문자, 안전알림, KEPCO | 5분 |
 | 안전·재난 | 지진, 기상특보 | 10~15분 |
 | 환경/유틸 | 가스앱, 기상청 예보, 에어코리아 | 20~30분 |

@@ -25,38 +25,49 @@ PLATFORM_MAP = {
 }
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Rename legacy `kakao_bus` entries to `korea_bus` in-place.
+    """Migrate older config entries forward.
 
-    No-op for everyone else.  Kept tiny on purpose — only one ENTRY_* was
-    ever renamed.  Returning True lets HA continue setup with the patched
-    entry; returning False would mark the entry as unmigratable.
+    v1 -> v2  (kr_component_kit 4.4.0): rename `kakao_bus` entries to
+    `korea_bus` in-place, and translate their entity unique_ids + device
+    identifiers so statistics and automations stay attached.  All other
+    entry types are a no-op v1->v2 bump.
+
+    Returning True lets HA continue setup with the patched entry.
+    Returning False marks the entry as unmigratable.
     """
-    if entry.data.get(CONF_ENTRY_TYPE) != "kakao_bus":
-        return True
-    new_data = {**entry.data, CONF_ENTRY_TYPE: "korea_bus"}
-    hass.config_entries.async_update_entry(entry, data=new_data)
+    if entry.version == 1:
+        if entry.data.get(CONF_ENTRY_TYPE) == "kakao_bus":
+            from homeassistant.helpers import device_registry as dr
+            from homeassistant.helpers import entity_registry as er
 
-    # Also bring entity unique_ids and device identifiers across so the
-    # renamed entities don't appear as new (orphaning their statistics +
-    # any automations referencing them).
-    from homeassistant.helpers import device_registry as dr
-    from homeassistant.helpers import entity_registry as er
-    ent_reg = er.async_get(hass)
-    for ent in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
-        if "_kakao_bus_" in ent.unique_id:
-            ent_reg.async_update_entity(
-                ent.entity_id,
-                new_unique_id=ent.unique_id.replace("_kakao_bus_", "_korea_bus_"),
-            )
-    dev_reg = dr.async_get(hass)
-    for dev in dr.async_entries_for_config_entry(dev_reg, entry.entry_id):
-        new_ids = {
-            (domain, ident.replace("kakao_bus_", "korea_bus_"))
-            if ident.startswith("kakao_bus_") else (domain, ident)
-            for domain, ident in dev.identifiers
-        }
-        if new_ids != dev.identifiers:
-            dev_reg.async_update_device(dev.id, new_identifiers=new_ids)
+            new_data = {**entry.data, CONF_ENTRY_TYPE: "korea_bus"}
+            hass.config_entries.async_update_entry(
+                entry, data=new_data, version=2)
+
+            ent_reg = er.async_get(hass)
+            for ent in er.async_entries_for_config_entry(
+                    ent_reg, entry.entry_id):
+                if "_kakao_bus_" in ent.unique_id:
+                    ent_reg.async_update_entity(
+                        ent.entity_id,
+                        new_unique_id=ent.unique_id.replace(
+                            "_kakao_bus_", "_korea_bus_"),
+                    )
+            dev_reg = dr.async_get(hass)
+            for dev in dr.async_entries_for_config_entry(
+                    dev_reg, entry.entry_id):
+                new_ids = {
+                    (domain, ident.replace("kakao_bus_", "korea_bus_"))
+                    if ident.startswith("kakao_bus_") else (domain, ident)
+                    for domain, ident in dev.identifiers
+                }
+                if new_ids != dev.identifiers:
+                    dev_reg.async_update_device(
+                        dev.id, new_identifiers=new_ids)
+        else:
+            # All non-kakao_bus entries just bump their version forward —
+            # nothing else changed in the v1->v2 step.
+            hass.config_entries.async_update_entry(entry, version=2)
     return True
 
 

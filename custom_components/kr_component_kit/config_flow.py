@@ -31,7 +31,10 @@ _REGION_GRID = {
 }
 
 class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    # VERSION 2 — bumped when ENTRY_KAKAO_BUS was renamed to ENTRY_KOREA_BUS
+    # (v4.4.0).  Bumping triggers async_migrate_entry in __init__.py for any
+    # entries created under the old name.
+    VERSION = 2
 
     def __init__(self):
         self._data: dict[str, Any] = {}
@@ -1247,9 +1250,12 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
         )
 
     async def async_step_seoul_bus_opt_done(self, user_input=None):
+        # Refuse to leave the entry with zero stations.  Without this guard,
+        # picking "Done" while empty would silently return to the menu and
+        # the user wouldn't know why nothing happened.  Aborting with an
+        # explicit reason surfaces a toast in the UI.
         if not self._stations:
-            # Refuse to leave the entry with zero stations — go back to menu.
-            return await self.async_step_init()
+            return self.async_abort(reason="no_stations")
         new_data = {
             **self._entry.data,
             "api_key": self._new_api_key,
@@ -1431,7 +1437,7 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_korea_bus_opt_done(self, user_input=None):
         if not self._stops:
-            return await self.async_step_init()
+            return self.async_abort(reason="no_stops")
         new_data = {**self._entry.data, "stops": self._stops}
         self.hass.config_entries.async_update_entry(self._entry, data=new_data)
         return self.async_create_entry(
