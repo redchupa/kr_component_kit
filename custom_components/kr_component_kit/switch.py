@@ -1,0 +1,37 @@
+"""Switch platform dispatcher."""
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from .const import *
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry,
+                            async_add_entities: AddEntitiesCallback) -> None:
+    etype = entry.data.get(CONF_ENTRY_TYPE)
+    store = hass.data[DOMAIN][entry.entry_id]
+    entities = []
+
+    if etype == ENTRY_SEOUL_BUS:
+        from .seoul_bus.switch import SeoulBusActiveSwitch
+        from .seoul_bus.device import seoul_bus_station_device
+        for st in store.get("stations", []):
+            coord = store["coordinators"].get(st["ars_id"])
+            if not coord:
+                continue
+            di = seoul_bus_station_device(
+                st["ars_id"], st.get("station_name") or st["ars_id"])
+            entities.append(SeoulBusActiveSwitch(coord, di))
+
+    elif etype == ENTRY_KOREA_BUS:
+        from .korea_bus.switch import KoreaBusActiveSwitch
+        from .korea_bus.device import korea_bus_station_device
+        for stop in store.get("stops", []):
+            coord = store["coordinators"].get(stop["stop_id"])
+            if not coord:
+                continue
+            di = korea_bus_station_device(
+                stop["stop_id"], stop.get("stop_name") or stop["stop_id"])
+            entities.append(KoreaBusActiveSwitch(coord, di))
+
+    if entities:
+        async_add_entities(entities)

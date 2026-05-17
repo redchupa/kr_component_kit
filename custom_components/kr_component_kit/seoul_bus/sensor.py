@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import slugify
 from ..const import DOMAIN
 
 KST = timezone(timedelta(hours=9))
@@ -30,6 +31,13 @@ class SeoulBusArrivalSensor(CoordinatorEntity, SensorEntity):
         suffix = "now" if index == 0 else "next"
         self._attr_unique_id = (
             f"{DOMAIN}_seoul_bus_{coordinator.ars_id}_{route}_{suffix}"
+        )
+        # Explicit ASCII entity_id keeps automations portable and avoids
+        # Hangul transcription artefacts in the slug.  Matches the
+        # convention shipped by Murianwind/seoul_bus.
+        self.entity_id = (
+            f"sensor.seoul_bus_{slugify(coordinator.ars_id)}_"
+            f"{slugify(route)}_{suffix}"
         )
         self._attr_name = f"{route} 다음" if index == 0 else f"{route} 다다음"
         self._attr_device_info = device_info

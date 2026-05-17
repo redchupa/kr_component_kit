@@ -20,8 +20,8 @@ PLATFORM_MAP = {
     ENTRY_AIRKOREA: [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.EVENT, Platform.CALENDAR],
     ENTRY_KMA_WEATHER: [Platform.WEATHER],
     ENTRY_EARTHQUAKE: [Platform.EVENT],
-    ENTRY_SEOUL_BUS: [Platform.SENSOR, Platform.BUTTON],
-    ENTRY_KOREA_BUS: [Platform.SENSOR, Platform.BUTTON],
+    ENTRY_SEOUL_BUS: [Platform.SENSOR, Platform.BUTTON, Platform.SWITCH],
+    ENTRY_KOREA_BUS: [Platform.SENSOR, Platform.BUTTON, Platform.SWITCH],
 }
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -250,7 +250,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 station_name=st.get("station_name") or st["ars_id"],
                 include_routes=st.get("routes") or [],
             )
+            # First refresh runs with api_enabled=True (default) so the
+            # entities have data to show right after install.  We then
+            # flip it OFF; SeoulBusActiveSwitch.async_added_to_hass will
+            # restore the user's last choice via RestoreEntity.
             await c.async_config_entry_first_refresh()
+            c.api_enabled = False
             coords[st["ars_id"]] = c
         store = {"coordinators": coords, "stations": stations}
 
@@ -270,7 +275,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 include_routes=stop.get("routes") or [],
                 scan_interval=scan,
             )
+            # Same first-refresh-then-OFF pattern as seoul_bus.
             await c.async_config_entry_first_refresh()
+            c.api_enabled = False
             kbus_coords[stop["stop_id"]] = c
         store = {"coordinators": kbus_coords, "stops": stops}
 

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import slugify
 from ..const import DOMAIN
 
 KST = timezone(timedelta(hours=9))
@@ -66,6 +67,12 @@ class KoreaBusArrivalSensor(CoordinatorEntity, SensorEntity):
         suffix = "now" if index == 0 else "next"
         self._attr_unique_id = (
             f"{DOMAIN}_korea_bus_{coordinator.stop_id}_{route}_{suffix}"
+        )
+        # ASCII entity_id so automations / dashboards don't have to deal
+        # with Hangul transcription artefacts.
+        self.entity_id = (
+            f"sensor.korea_bus_{slugify(coordinator.stop_id)}_"
+            f"{slugify(route)}_{suffix}"
         )
         self._attr_name = f"{route} 다음" if index == 0 else f"{route} 다다음"
         self._attr_device_info = device_info

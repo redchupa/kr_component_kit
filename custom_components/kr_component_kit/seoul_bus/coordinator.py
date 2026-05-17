@@ -13,7 +13,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class SeoulBusCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
-    """Polls the Seoul Bus official API for a single station (ARS-ID)."""
+    """Polls the Seoul Bus official API for a single station (ARS-ID).
+
+    Polling is gated by `api_enabled`.  When OFF the coordinator returns
+    its stale data (or an empty dict) without hitting the API, so users
+    can drive polling from automations: only fetch on weekday mornings,
+    only when in proximity to the stop, etc.  Pattern inherited from the
+    upstream Murianwind/seoul_bus fork.
+    """
 
     def __init__(
         self,
@@ -33,8 +40,17 @@ class SeoulBusCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         self.station_name = station_name
         self._include_routes = list(include_routes or [])
         self._session = async_get_clientsession(hass)
+        # Gate flag — flipped by SeoulBusActiveSwitch.  Starts True so the
+        # initial first_refresh has data to populate the entities; the
+        # switch's RestoreEntity then resets it to the user's last choice.
+        self.api_enabled: bool = True
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
+        if not self.api_enabled:
+            _LOGGER.debug(
+                "Seoul Bus polling skipped for %s — api_enabled=False",
+                self.ars_id)
+            return self.data or {}
         try:
             items = await fetch_station(self._session, self._api_key, self.ars_id)
         except SeoulBusApiError as err:
