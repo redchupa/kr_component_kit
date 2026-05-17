@@ -272,7 +272,7 @@
     },
     "error": {
       "cannot_connect": "API에 연결할 수 없습니다. ({error})",
-      "invalid_api_key": "API 키가 유효하지 않습니다.",
+      "invalid_api_key": "API 키가 유효하지 않습니다. 발급 직후라면 data.go.kr 마이페이지 → 활용신청 현황에서 **승인됨** 상태인지 + 활용기간이 오늘부터인지 확인 후 1시간 정도 후 재시도하세요 (활성화 지연).",
       "invalid_ars_format": "ARS-ID는 정류장 표지판에 적힌 **5자리 숫자** 입니다 (예: 23288). 카카오맵 정류장 ID(예: BS09013700)는 여기에 넣을 수 없습니다.",
       "no_arrivals_yet": "이 정류장에 현재 도착 예정 버스가 없거나, ARS-ID 가 잘못됐습니다.\n• 정류장 표지판의 **5자리** 번호가 맞는지 확인\n• 새벽이나 노선이 적은 정류장은 잠시 후 다시 시도\n• HA 로그(`custom_components.kr_component_kit.seoul_bus.api` debug)에 실제 응답 내용이 기록됩니다.",
       "no_schools_found": "학교를 찾을 수 없습니다.",
@@ -368,7 +368,7 @@
     },
     "error": {
       "cannot_connect": "API에 연결할 수 없습니다. ({error})",
-      "invalid_api_key": "API 키가 유효하지 않습니다.",
+      "invalid_api_key": "API 키가 유효하지 않습니다. 발급 직후라면 data.go.kr 마이페이지 → 활용신청 현황에서 **승인됨** 상태인지 + 활용기간이 오늘부터인지 확인 후 1시간 정도 후 재시도하세요 (활성화 지연).",
       "invalid_ars_format": "ARS-ID는 정류장 표지판에 적힌 **5자리 숫자** 입니다 (예: 23288).",
       "no_arrivals_yet": "이 정류장에 현재 도착 예정 버스가 없거나, ARS-ID 가 잘못됐습니다.\n정류장 표지판의 5자리 번호 확인 후 다시 시도하세요.",
       "no_stops_found": "정류장을 찾을 수 없습니다.",
