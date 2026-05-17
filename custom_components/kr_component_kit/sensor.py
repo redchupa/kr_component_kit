@@ -110,18 +110,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry,
                 for idx in range(2):
                     entities.append(SeoulBusArrivalSensor(coord, rt, idx, di))
 
-    elif etype == ENTRY_KAKAO_BUS:
-        from .kakao_bus.sensor import KakaoBusArrivalSensor
-        from .kakao_bus.device import kakao_bus_station_device
+    elif etype == ENTRY_KOREA_BUS:
+        from .korea_bus.sensor import KoreaBusArrivalSensor
+        from .korea_bus.device import korea_bus_station_device
         for stop in store.get("stops", []):
             coord = store["coordinators"].get(stop["stop_id"])
             if not coord:
                 continue
-            di = kakao_bus_station_device(stop["stop_id"], stop.get("stop_name") or stop["stop_id"])
+            di = korea_bus_station_device(stop["stop_id"], stop.get("stop_name") or stop["stop_id"])
             routes = stop.get("routes") or list((coord.data or {}).keys())
             for rt in routes:
                 for idx in range(2):
-                    entities.append(KakaoBusArrivalSensor(coord, rt, idx, di))
+                    entities.append(KoreaBusArrivalSensor(coord, rt, idx, di))
 
     if entities:
         async_add_entities(entities)

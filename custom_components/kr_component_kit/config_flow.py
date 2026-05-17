@@ -45,7 +45,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             menu_options=["weather_warning", "transit", "fuel", "school",
                          "disaster", "safety_alert", "kepco", "gasapp", "arisu",
                          "pharmacy", "airkorea", "kma_weather", "earthquake",
-                         "seoul_bus", "kakao_bus"],
+                         "seoul_bus", "korea_bus"],
         )
 
     # ══════════ 기상특보 ══════════
@@ -887,17 +887,17 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
         return self.async_create_entry(title="서울버스", data=self._data)
 
-    # ══════════ 카카오 버스 ══════════
-    async def async_step_kakao_bus(self, user_input=None) -> FlowResult:
+    # ══════════ 한국 버스 ══════════
+    async def async_step_korea_bus(self, user_input=None) -> FlowResult:
         """Step 1 — enter a bus stop name to search."""
-        from .kakao_bus.api import KakaoBusApiError, search_stops
+        from .korea_bus.api import KoreaBusApiError, search_stops
         errors: dict[str, str] = {}
         if user_input is not None:
             name = user_input["stop_name"].strip()
             session = async_get_clientsession(self.hass)
             try:
                 stops = await search_stops(session, name)
-            except KakaoBusApiError as e:
+            except KoreaBusApiError as e:
                 _LOGGER.warning("KakaoMap search failed: %s", e)
                 errors["base"] = "cannot_connect"
                 stops = {}
@@ -905,25 +905,25 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if not stops:
                     errors["stop_name"] = "no_stops_found"
                 else:
-                    self._data = {CONF_ENTRY_TYPE: ENTRY_KAKAO_BUS, "stops": []}
+                    self._data = {CONF_ENTRY_TYPE: ENTRY_KOREA_BUS, "stops": []}
                     self._kbus_results = stops
-                    return await self.async_step_kakao_bus_select_stop()
+                    return await self.async_step_korea_bus_select_stop()
         return self.async_show_form(
-            step_id="kakao_bus",
+            step_id="korea_bus",
             data_schema=vol.Schema({vol.Required("stop_name"): str}),
             errors=errors,
         )
 
-    async def async_step_kakao_bus_search(self, user_input=None) -> FlowResult:
+    async def async_step_korea_bus_search(self, user_input=None) -> FlowResult:
         """Repeat search (used when adding more stops to an existing entry)."""
-        from .kakao_bus.api import KakaoBusApiError, search_stops
+        from .korea_bus.api import KoreaBusApiError, search_stops
         errors: dict[str, str] = {}
         if user_input is not None:
             name = user_input["stop_name"].strip()
             session = async_get_clientsession(self.hass)
             try:
                 stops = await search_stops(session, name)
-            except KakaoBusApiError as e:
+            except KoreaBusApiError as e:
                 _LOGGER.warning("KakaoMap search failed: %s", e)
                 errors["base"] = "cannot_connect"
                 stops = {}
@@ -932,16 +932,16 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["stop_name"] = "no_stops_found"
                 else:
                     self._kbus_results = stops
-                    return await self.async_step_kakao_bus_select_stop()
+                    return await self.async_step_korea_bus_select_stop()
         return self.async_show_form(
-            step_id="kakao_bus_search",
+            step_id="korea_bus_search",
             data_schema=vol.Schema({vol.Required("stop_name"): str}),
             errors=errors,
         )
 
-    async def async_step_kakao_bus_select_stop(self, user_input=None) -> FlowResult:
+    async def async_step_korea_bus_select_stop(self, user_input=None) -> FlowResult:
         """Step 2 — pick a stop from the search results, then probe routes."""
-        from .kakao_bus.api import KakaoBusApiError, fetch_stop_routes
+        from .korea_bus.api import KoreaBusApiError, fetch_stop_routes
         errors: dict[str, str] = {}
         if user_input is not None:
             stop_id = user_input["stop_id"]
@@ -949,7 +949,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             session = async_get_clientsession(self.hass)
             try:
                 routes = await fetch_stop_routes(session, stop_id)
-            except KakaoBusApiError as e:
+            except KoreaBusApiError as e:
                 _LOGGER.warning("KakaoMap stop-routes failed: %s", e)
                 errors["base"] = "cannot_connect"
                 routes = []
@@ -960,15 +960,15 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._kbus_stop_id = stop_id
                     self._kbus_stop_name = stop_info.get("title") or stop_id
                     self._kbus_routes = routes
-                    return await self.async_step_kakao_bus_select_routes()
+                    return await self.async_step_korea_bus_select_routes()
         opts = {k: v["title"] for k, v in self._kbus_results.items()}
         return self.async_show_form(
-            step_id="kakao_bus_select_stop",
+            step_id="korea_bus_select_stop",
             data_schema=vol.Schema({vol.Required("stop_id"): vol.In(opts)}),
             errors=errors,
         )
 
-    async def async_step_kakao_bus_select_routes(
+    async def async_step_korea_bus_select_routes(
         self, user_input=None) -> FlowResult:
         """Step 3 — pick routes at the chosen stop."""
         import homeassistant.helpers.config_validation as cv
@@ -978,31 +978,31 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "stop_name": self._kbus_stop_name,
                 "routes": user_input.get("routes", []),
             })
-            return await self.async_step_kakao_bus_menu()
+            return await self.async_step_korea_bus_menu()
         labels = {
             r["number"]: (f"{r['type']} {r['number']}".strip()
                           if r["type"] else r["number"])
             for r in self._kbus_routes
         }
         return self.async_show_form(
-            step_id="kakao_bus_select_routes",
+            step_id="korea_bus_select_routes",
             data_schema=vol.Schema({
                 vol.Required("routes", default=list(labels.keys())):
                     cv.multi_select(labels),
             }),
         )
 
-    async def async_step_kakao_bus_menu(self, user_input=None) -> FlowResult:
+    async def async_step_korea_bus_menu(self, user_input=None) -> FlowResult:
         return self.async_show_menu(
-            step_id="kakao_bus_menu",
-            menu_options=["kakao_bus_search", "kakao_bus_done"],
+            step_id="korea_bus_menu",
+            menu_options=["korea_bus_search", "korea_bus_done"],
         )
 
-    async def async_step_kakao_bus_done(self, user_input=None) -> FlowResult:
+    async def async_step_korea_bus_done(self, user_input=None) -> FlowResult:
         ids = "_".join(sorted(s["stop_id"] for s in self._data["stops"]))
-        await self.async_set_unique_id(f"{ENTRY_KAKAO_BUS}_{ids}")
+        await self.async_set_unique_id(f"{ENTRY_KOREA_BUS}_{ids}")
         self._abort_if_unique_id_configured()
-        return self.async_create_entry(title="카카오버스", data=self._data)
+        return self.async_create_entry(title="한국 버스", data=self._data)
 
         # ══════════ Options Flow =════════
 
@@ -1016,13 +1016,13 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         self._entry = config_entry
-        # Working copies used by the menu-driven seoul_bus / kakao_bus
+        # Working copies used by the menu-driven seoul_bus / korea_bus
         # option flows. None until first menu visit; persisted to entry.data
         # only when the user picks "Save & Exit".
         self._stations: list[dict] | None = None  # seoul_bus
-        self._stops: list[dict] | None = None  # kakao_bus
+        self._stops: list[dict] | None = None  # korea_bus
         self._new_api_key: str | None = None  # seoul_bus
-        self._new_scan_interval: int | None = None  # kakao_bus
+        self._new_scan_interval: int | None = None  # korea_bus
         # Per-sub-step scratch space
         self._opt_sb_ars_id: str | None = None
         self._opt_sb_station_name: str | None = None
@@ -1052,24 +1052,24 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
                 ],
             )
 
-        if etype == ENTRY_KAKAO_BUS:
+        if etype == ENTRY_KOREA_BUS:
             if self._stops is None:
                 self._stops = [dict(s) for s
                                in self._entry.data.get("stops", [])]
-                from .kakao_bus import KAKAO_BUS_SCAN_INTERVAL
+                from .korea_bus import KOREA_BUS_SCAN_INTERVAL
                 self._new_scan_interval = (
                     self._entry.options.get("scan_interval")
                     or self._entry.data.get(
-                        "scan_interval", KAKAO_BUS_SCAN_INTERVAL)
+                        "scan_interval", KOREA_BUS_SCAN_INTERVAL)
                 )
             return self.async_show_menu(
                 step_id="init",
                 menu_options=[
-                    "kakao_bus_opt_add",
-                    "kakao_bus_opt_remove",
-                    "kakao_bus_opt_edit_routes",
-                    "kakao_bus_opt_edit_interval",
-                    "kakao_bus_opt_done",
+                    "korea_bus_opt_add",
+                    "korea_bus_opt_remove",
+                    "korea_bus_opt_edit_routes",
+                    "korea_bus_opt_edit_interval",
+                    "korea_bus_opt_done",
                 ],
             )
 
@@ -1258,17 +1258,17 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
         self.hass.config_entries.async_update_entry(self._entry, data=new_data)
         return self.async_create_entry(title="", data={})
 
-    # ─────────────────────────── 카카오버스 옵션 ──────────────────────────
+    # ─────────────────────────── 한국 버스 옵션 ──────────────────────────
 
-    async def async_step_kakao_bus_opt_add(self, user_input=None):
-        from .kakao_bus.api import KakaoBusApiError, search_stops
+    async def async_step_korea_bus_opt_add(self, user_input=None):
+        from .korea_bus.api import KoreaBusApiError, search_stops
         errors: dict[str, str] = {}
         if user_input is not None:
             name = user_input["stop_name"].strip()
             session = async_get_clientsession(self.hass)
             try:
                 stops = await search_stops(session, name)
-            except KakaoBusApiError as e:
+            except KoreaBusApiError as e:
                 _LOGGER.warning("KakaoMap search failed: %s", e)
                 errors["base"] = "cannot_connect"
                 stops = {}
@@ -1277,15 +1277,15 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
                     errors["stop_name"] = "no_stops_found"
                 else:
                     self._opt_kbus_results = stops
-                    return await self.async_step_kakao_bus_opt_add_pick()
+                    return await self.async_step_korea_bus_opt_add_pick()
         return self.async_show_form(
-            step_id="kakao_bus_opt_add",
+            step_id="korea_bus_opt_add",
             data_schema=vol.Schema({vol.Required("stop_name"): str}),
             errors=errors,
         )
 
-    async def async_step_kakao_bus_opt_add_pick(self, user_input=None):
-        from .kakao_bus.api import KakaoBusApiError, fetch_stop_routes
+    async def async_step_korea_bus_opt_add_pick(self, user_input=None):
+        from .korea_bus.api import KoreaBusApiError, fetch_stop_routes
         errors: dict[str, str] = {}
         if user_input is not None:
             stop_id = user_input["stop_id"]
@@ -1296,7 +1296,7 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
                 session = async_get_clientsession(self.hass)
                 try:
                     routes = await fetch_stop_routes(session, stop_id)
-                except KakaoBusApiError as e:
+                except KoreaBusApiError as e:
                     _LOGGER.warning("KakaoMap stop-routes failed: %s", e)
                     errors["base"] = "cannot_connect"
                     routes = []
@@ -1307,15 +1307,15 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
                         self._opt_kbus_stop_id = stop_id
                         self._opt_kbus_stop_name = stop_info.get("title") or stop_id
                         self._opt_kbus_routes = routes
-                        return await self.async_step_kakao_bus_opt_add_routes()
+                        return await self.async_step_korea_bus_opt_add_routes()
         opts = {k: v["title"] for k, v in (self._opt_kbus_results or {}).items()}
         return self.async_show_form(
-            step_id="kakao_bus_opt_add_pick",
+            step_id="korea_bus_opt_add_pick",
             data_schema=vol.Schema({vol.Required("stop_id"): vol.In(opts)}),
             errors=errors,
         )
 
-    async def async_step_kakao_bus_opt_add_routes(self, user_input=None):
+    async def async_step_korea_bus_opt_add_routes(self, user_input=None):
         import homeassistant.helpers.config_validation as cv
         if user_input is not None:
             self._stops.append({
@@ -1330,14 +1330,14 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
             for r in (self._opt_kbus_routes or [])
         }
         return self.async_show_form(
-            step_id="kakao_bus_opt_add_routes",
+            step_id="korea_bus_opt_add_routes",
             data_schema=vol.Schema({
                 vol.Required("routes", default=list(labels.keys())):
                     cv.multi_select(labels),
             }),
         )
 
-    async def async_step_kakao_bus_opt_remove(self, user_input=None):
+    async def async_step_korea_bus_opt_remove(self, user_input=None):
         import homeassistant.helpers.config_validation as cv
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -1353,22 +1353,22 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
         labels = {s["stop_id"]: s.get("stop_name") or s["stop_id"]
                   for s in self._stops}
         return self.async_show_form(
-            step_id="kakao_bus_opt_remove",
+            step_id="korea_bus_opt_remove",
             data_schema=vol.Schema({
                 vol.Required("stop_ids"): cv.multi_select(labels),
             }),
             errors=errors,
         )
 
-    async def async_step_kakao_bus_opt_edit_routes(self, user_input=None):
-        from .kakao_bus.api import KakaoBusApiError, fetch_stop_routes
+    async def async_step_korea_bus_opt_edit_routes(self, user_input=None):
+        from .korea_bus.api import KoreaBusApiError, fetch_stop_routes
         errors: dict[str, str] = {}
         if user_input is not None:
             stop_id = user_input["stop_id"]
             session = async_get_clientsession(self.hass)
             try:
                 routes = await fetch_stop_routes(session, stop_id)
-            except KakaoBusApiError as e:
+            except KoreaBusApiError as e:
                 _LOGGER.warning("KakaoMap stop-routes failed: %s", e)
                 errors["base"] = "cannot_connect"
                 routes = []
@@ -1378,18 +1378,18 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
                 else:
                     self._opt_kbus_stop_id = stop_id
                     self._opt_kbus_routes = routes
-                    return await self.async_step_kakao_bus_opt_edit_routes_pick()
+                    return await self.async_step_korea_bus_opt_edit_routes_pick()
         if not self._stops:
             return await self.async_step_init()
         labels = {s["stop_id"]: s.get("stop_name") or s["stop_id"]
                   for s in self._stops}
         return self.async_show_form(
-            step_id="kakao_bus_opt_edit_routes",
+            step_id="korea_bus_opt_edit_routes",
             data_schema=vol.Schema({vol.Required("stop_id"): vol.In(labels)}),
             errors=errors,
         )
 
-    async def async_step_kakao_bus_opt_edit_routes_pick(self, user_input=None):
+    async def async_step_korea_bus_opt_edit_routes_pick(self, user_input=None):
         import homeassistant.helpers.config_validation as cv
         if user_input is not None:
             for s in self._stops:
@@ -1407,29 +1407,29 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
              if s["stop_id"] == self._opt_kbus_stop_id),
             [])
         return self.async_show_form(
-            step_id="kakao_bus_opt_edit_routes_pick",
+            step_id="korea_bus_opt_edit_routes_pick",
             data_schema=vol.Schema({
                 vol.Required("routes", default=current or list(labels.keys())):
                     cv.multi_select(labels),
             }),
         )
 
-    async def async_step_kakao_bus_opt_edit_interval(self, user_input=None):
-        from .kakao_bus import KAKAO_BUS_SCAN_INTERVAL
+    async def async_step_korea_bus_opt_edit_interval(self, user_input=None):
+        from .korea_bus import KOREA_BUS_SCAN_INTERVAL
         if user_input is not None:
             self._new_scan_interval = user_input["scan_interval"]
             return await self.async_step_init()
         return self.async_show_form(
-            step_id="kakao_bus_opt_edit_interval",
+            step_id="korea_bus_opt_edit_interval",
             data_schema=vol.Schema({
                 vol.Required("scan_interval",
                              default=self._new_scan_interval
-                                     or KAKAO_BUS_SCAN_INTERVAL):
+                                     or KOREA_BUS_SCAN_INTERVAL):
                     vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
             }),
         )
 
-    async def async_step_kakao_bus_opt_done(self, user_input=None):
+    async def async_step_korea_bus_opt_done(self, user_input=None):
         if not self._stops:
             return await self.async_step_init()
         new_data = {**self._entry.data, "stops": self._stops}
@@ -1549,7 +1549,7 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional("min_magnitude", default=d.get("min_magnitude", 3.0)): vol.Coerce(float),
             })
 
-        # ENTRY_SEOUL_BUS / ENTRY_KAKAO_BUS are handled by their own menu-
+        # ENTRY_SEOUL_BUS / ENTRY_KOREA_BUS are handled by their own menu-
         # driven option flows above; they never reach _build_schema.
 
         return None

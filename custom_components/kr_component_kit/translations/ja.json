@@ -18,7 +18,7 @@
           "kma_weather": "気象庁天気予報",
           "earthquake": "地震情報",
           "seoul_bus": "🚌 ソウル市バス (公式API)",
-          "kakao_bus": "🟡 カカオバス (全国, カカオマップ)"
+          "korea_bus": "🚍 韓国バス (全国, カカオマップ)"
         }
       },
       "weather_warning": {
@@ -234,39 +234,39 @@
           "seoul_bus_done": "完了"
         }
       },
-      "kakao_bus": {
-        "title": "🟡 カカオバス — 停留所検索",
+      "korea_bus": {
+        "title": "🚍 韓国バス — 停留所検索",
         "description": "停留所 **名前** をカカオマップで検索します (例: 江南駅, 사당, 마포구청)。\nAPIキー不要。全国の大部分の停留所に対応。",
         "data": {
           "stop_name": "停留所名"
         }
       },
-      "kakao_bus_search": {
-        "title": "🟡 カカオバス — 別の停留所を検索",
+      "korea_bus_search": {
+        "title": "🚍 韓国バス — 別の停留所を検索",
         "description": "別の停留所名を入力してください。",
         "data": {
           "stop_name": "停留所名"
         }
       },
-      "kakao_bus_select_stop": {
-        "title": "🚏 カカオバス — 停留所を選択",
+      "korea_bus_select_stop": {
+        "title": "🚏 韓国バス — 停留所を選択",
         "description": "検索結果から停留所を選択してください。",
         "data": {
           "stop_id": "停留所"
         }
       },
-      "kakao_bus_select_routes": {
-        "title": "🚌 カカオバス — 路線を選択",
+      "korea_bus_select_routes": {
+        "title": "🚌 韓国バス — 路線を選択",
         "description": "選択した路線ごとに到着センサー2個(次・次の次)が生成されます。",
         "data": {
           "routes": "追跡する路線"
         }
       },
-      "kakao_bus_menu": {
-        "title": "🟡 カカオバス — 次のアクション",
+      "korea_bus_menu": {
+        "title": "🚍 韓国バス — 次のアクション",
         "menu_options": {
-          "kakao_bus_search": "停留所を追加",
-          "kakao_bus_done": "完了"
+          "korea_bus_search": "停留所を追加",
+          "korea_bus_done": "完了"
         }
       }
     },
@@ -293,11 +293,11 @@
           "seoul_bus_opt_edit_routes": "🚌 停留所の路線を編集",
           "seoul_bus_opt_edit_key": "🔑 APIキーを変更",
           "seoul_bus_opt_done": "✅ 保存して終了",
-          "kakao_bus_opt_add": "🚏 停留所を追加",
-          "kakao_bus_opt_remove": "🗑 停留所を削除",
-          "kakao_bus_opt_edit_routes": "🚌 停留所の路線を編集",
-          "kakao_bus_opt_edit_interval": "⏱ ポーリング間隔を変更",
-          "kakao_bus_opt_done": "✅ 保存して終了"
+          "korea_bus_opt_add": "🚏 停留所を追加",
+          "korea_bus_opt_remove": "🗑 停留所を削除",
+          "korea_bus_opt_edit_routes": "🚌 停留所の路線を編集",
+          "korea_bus_opt_edit_interval": "⏱ ポーリング間隔を変更",
+          "korea_bus_opt_done": "✅ 保存して終了"
         }
       },
       "seoul_bus_opt_add": {
@@ -330,34 +330,34 @@
         "description": "変更したキーは保存直前に自動検証されます。",
         "data": { "api_key": "data.go.kr サービスキー" }
       },
-      "kakao_bus_opt_add": {
-        "title": "🚏 カカオバス — 追加する停留所を検索",
+      "korea_bus_opt_add": {
+        "title": "🚏 韓国バス — 追加する停留所を検索",
         "description": "停留所名を入力してください (例: 江南駅, 사당)。",
         "data": { "stop_name": "停留所名" }
       },
-      "kakao_bus_opt_add_pick": {
-        "title": "🚏 カカオバス — 停留所を選択",
+      "korea_bus_opt_add_pick": {
+        "title": "🚏 韓国バス — 停留所を選択",
         "data": { "stop_id": "停留所" }
       },
-      "kakao_bus_opt_add_routes": {
-        "title": "🚌 カカオバス — 新しい停留所の路線を選択",
+      "korea_bus_opt_add_routes": {
+        "title": "🚌 韓国バス — 新しい停留所の路線を選択",
         "data": { "routes": "追跡する路線" }
       },
-      "kakao_bus_opt_remove": {
-        "title": "🗑 カカオバス — 停留所を削除",
+      "korea_bus_opt_remove": {
+        "title": "🗑 韓国バス — 停留所を削除",
         "description": "削除する停留所を選択してください (複数選択可)。",
         "data": { "stop_ids": "削除する停留所" }
       },
-      "kakao_bus_opt_edit_routes": {
-        "title": "🚌 カカオバス — 路線を編集する停留所を選択",
+      "korea_bus_opt_edit_routes": {
+        "title": "🚌 韓国バス — 路線を編集する停留所を選択",
         "data": { "stop_id": "停留所" }
       },
-      "kakao_bus_opt_edit_routes_pick": {
-        "title": "🚌 カカオバス — 路線を再選択",
+      "korea_bus_opt_edit_routes_pick": {
+        "title": "🚌 韓国バス — 路線を再選択",
         "data": { "routes": "追跡する路線" }
       },
-      "kakao_bus_opt_edit_interval": {
-        "title": "⏱ カカオバス — ポーリング間隔を変更",
+      "korea_bus_opt_edit_interval": {
+        "title": "⏱ 韓国バス — ポーリング間隔を変更",
         "description": "カカオマップのポーリング間隔を秒単位で設定します (30〜3600秒)。",
         "data": { "scan_interval": "ポーリング間隔 (秒)" }
       }

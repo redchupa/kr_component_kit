@@ -21,8 +21,44 @@ PLATFORM_MAP = {
     ENTRY_KMA_WEATHER: [Platform.WEATHER],
     ENTRY_EARTHQUAKE: [Platform.EVENT],
     ENTRY_SEOUL_BUS: [Platform.SENSOR, Platform.BUTTON],
-    ENTRY_KAKAO_BUS: [Platform.SENSOR, Platform.BUTTON],
+    ENTRY_KOREA_BUS: [Platform.SENSOR, Platform.BUTTON],
 }
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Rename legacy `kakao_bus` entries to `korea_bus` in-place.
+
+    No-op for everyone else.  Kept tiny on purpose — only one ENTRY_* was
+    ever renamed.  Returning True lets HA continue setup with the patched
+    entry; returning False would mark the entry as unmigratable.
+    """
+    if entry.data.get(CONF_ENTRY_TYPE) != "kakao_bus":
+        return True
+    new_data = {**entry.data, CONF_ENTRY_TYPE: "korea_bus"}
+    hass.config_entries.async_update_entry(entry, data=new_data)
+
+    # Also bring entity unique_ids and device identifiers across so the
+    # renamed entities don't appear as new (orphaning their statistics +
+    # any automations referencing them).
+    from homeassistant.helpers import device_registry as dr
+    from homeassistant.helpers import entity_registry as er
+    ent_reg = er.async_get(hass)
+    for ent in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        if "_kakao_bus_" in ent.unique_id:
+            ent_reg.async_update_entity(
+                ent.entity_id,
+                new_unique_id=ent.unique_id.replace("_kakao_bus_", "_korea_bus_"),
+            )
+    dev_reg = dr.async_get(hass)
+    for dev in dr.async_entries_for_config_entry(dev_reg, entry.entry_id):
+        new_ids = {
+            (domain, ident.replace("kakao_bus_", "korea_bus_"))
+            if ident.startswith("kakao_bus_") else (domain, ident)
+            for domain, ident in dev.identifiers
+        }
+        if new_ids != dev.identifiers:
+            dev_reg.async_update_device(dev.id, new_identifiers=new_ids)
+    return True
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
@@ -207,16 +243,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             coords[st["ars_id"]] = c
         store = {"coordinators": coords, "stations": stations}
 
-    elif etype == ENTRY_KAKAO_BUS:
-        from .kakao_bus.coordinator import KakaoBusCoordinator
-        from .kakao_bus import KAKAO_BUS_SCAN_INTERVAL
+    elif etype == ENTRY_KOREA_BUS:
+        from .korea_bus.coordinator import KoreaBusCoordinator
+        from .korea_bus import KOREA_BUS_SCAN_INTERVAL
         scan = entry.options.get("scan_interval",
                                  entry.data.get("scan_interval",
-                                                KAKAO_BUS_SCAN_INTERVAL))
+                                                KOREA_BUS_SCAN_INTERVAL))
         stops = entry.data.get("stops", [])
-        kbus_coords: dict[str, KakaoBusCoordinator] = {}
+        kbus_coords: dict[str, KoreaBusCoordinator] = {}
         for stop in stops:
-            c = KakaoBusCoordinator(
+            c = KoreaBusCoordinator(
                 hass,
                 stop_id=stop["stop_id"],
                 stop_name=stop.get("stop_name") or stop["stop_id"],

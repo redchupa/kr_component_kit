@@ -18,7 +18,7 @@
           "kma_weather": "KMA Weather Forecast",
           "earthquake": "Earthquake Info",
           "seoul_bus": "🚌 Seoul Bus (Official API)",
-          "kakao_bus": "🟡 Kakao Bus (Nationwide, KakaoMap)"
+          "korea_bus": "🚍 Korea Bus (Nationwide, KakaoMap)"
         }
       },
       "weather_warning": {
@@ -234,39 +234,39 @@
           "seoul_bus_done": "Finish"
         }
       },
-      "kakao_bus": {
-        "title": "🟡 Kakao Bus — Search Stop",
+      "korea_bus": {
+        "title": "🚍 Korea Bus — Search Stop",
         "description": "Search by stop **name** on KakaoMap (e.g. Gangnam Station, 사당, 마포구청).\nNo API key required; works for most stops nationwide.",
         "data": {
           "stop_name": "Stop name"
         }
       },
-      "kakao_bus_search": {
-        "title": "🟡 Kakao Bus — Search Another Stop",
+      "korea_bus_search": {
+        "title": "🚍 Korea Bus — Search Another Stop",
         "description": "Enter another stop name.",
         "data": {
           "stop_name": "Stop name"
         }
       },
-      "kakao_bus_select_stop": {
-        "title": "🚏 Kakao Bus — Pick a Stop",
+      "korea_bus_select_stop": {
+        "title": "🚏 Korea Bus — Pick a Stop",
         "description": "Choose the stop from the search results.",
         "data": {
           "stop_id": "Stop"
         }
       },
-      "kakao_bus_select_routes": {
-        "title": "🚌 Kakao Bus — Select Routes",
+      "korea_bus_select_routes": {
+        "title": "🚌 Korea Bus — Select Routes",
         "description": "Each selected route gets two arrival sensors (next + after).",
         "data": {
           "routes": "Routes to track"
         }
       },
-      "kakao_bus_menu": {
-        "title": "🟡 Kakao Bus — Next Action",
+      "korea_bus_menu": {
+        "title": "🚍 Korea Bus — Next Action",
         "menu_options": {
-          "kakao_bus_search": "Add another stop",
-          "kakao_bus_done": "Finish"
+          "korea_bus_search": "Add another stop",
+          "korea_bus_done": "Finish"
         }
       }
     },
@@ -293,11 +293,11 @@
           "seoul_bus_opt_edit_routes": "🚌 Edit Routes for a Stop",
           "seoul_bus_opt_edit_key": "🔑 Change API Key",
           "seoul_bus_opt_done": "✅ Save & Finish",
-          "kakao_bus_opt_add": "🚏 Add Stop",
-          "kakao_bus_opt_remove": "🗑 Remove Stop(s)",
-          "kakao_bus_opt_edit_routes": "🚌 Edit Routes for a Stop",
-          "kakao_bus_opt_edit_interval": "⏱ Change Poll Interval",
-          "kakao_bus_opt_done": "✅ Save & Finish"
+          "korea_bus_opt_add": "🚏 Add Stop",
+          "korea_bus_opt_remove": "🗑 Remove Stop(s)",
+          "korea_bus_opt_edit_routes": "🚌 Edit Routes for a Stop",
+          "korea_bus_opt_edit_interval": "⏱ Change Poll Interval",
+          "korea_bus_opt_done": "✅ Save & Finish"
         }
       },
       "seoul_bus_opt_add": {
@@ -330,34 +330,34 @@
         "description": "The new key is validated against the live API before being saved.",
         "data": { "api_key": "data.go.kr service key" }
       },
-      "kakao_bus_opt_add": {
-        "title": "🚏 Kakao Bus — Search Stop to Add",
+      "korea_bus_opt_add": {
+        "title": "🚏 Korea Bus — Search Stop to Add",
         "description": "Search by stop name (e.g. Gangnam Station, 사당).",
         "data": { "stop_name": "Stop name" }
       },
-      "kakao_bus_opt_add_pick": {
-        "title": "🚏 Kakao Bus — Pick Stop",
+      "korea_bus_opt_add_pick": {
+        "title": "🚏 Korea Bus — Pick Stop",
         "data": { "stop_id": "Stop" }
       },
-      "kakao_bus_opt_add_routes": {
-        "title": "🚌 Kakao Bus — Select Routes for New Stop",
+      "korea_bus_opt_add_routes": {
+        "title": "🚌 Korea Bus — Select Routes for New Stop",
         "data": { "routes": "Routes to track" }
       },
-      "kakao_bus_opt_remove": {
-        "title": "🗑 Kakao Bus — Remove Stop(s)",
+      "korea_bus_opt_remove": {
+        "title": "🗑 Korea Bus — Remove Stop(s)",
         "description": "Pick the stops to remove (multi-select).",
         "data": { "stop_ids": "Stops to remove" }
       },
-      "kakao_bus_opt_edit_routes": {
-        "title": "🚌 Kakao Bus — Pick Stop to Edit",
+      "korea_bus_opt_edit_routes": {
+        "title": "🚌 Korea Bus — Pick Stop to Edit",
         "data": { "stop_id": "Stop" }
       },
-      "kakao_bus_opt_edit_routes_pick": {
-        "title": "🚌 Kakao Bus — Re-select Routes",
+      "korea_bus_opt_edit_routes_pick": {
+        "title": "🚌 Korea Bus — Re-select Routes",
         "data": { "routes": "Routes to track" }
       },
-      "kakao_bus_opt_edit_interval": {
-        "title": "⏱ Kakao Bus — Change Poll Interval",
+      "korea_bus_opt_edit_interval": {
+        "title": "⏱ Korea Bus — Change Poll Interval",
         "description": "How often to poll KakaoMap, in seconds (30–3600).",
         "data": { "scan_interval": "Poll interval (seconds)" }
       }

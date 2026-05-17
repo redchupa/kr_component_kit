@@ -22,7 +22,7 @@ from . import KAKAO_ARRIVALS_URL, KAKAO_HEADERS, KAKAO_SEARCH_URL, KAKAO_STATION
 _LOGGER = logging.getLogger(__name__)
 
 
-class KakaoBusApiError(Exception):
+class KoreaBusApiError(Exception):
     """Raised on transport, HTTP, or parse failures."""
 
 
@@ -52,11 +52,11 @@ async def search_stops(
         async with asyncio.timeout(10):
             async with session.get(url, headers=KAKAO_HEADERS) as r:
                 if r.status != 200:
-                    raise KakaoBusApiError(
+                    raise KoreaBusApiError(
                         f"KakaoMap search HTTP {r.status} for q={name!r}")
                 body = await r.text()
     except (asyncio.TimeoutError, aiohttp.ClientError) as e:
-        raise KakaoBusApiError(f"KakaoMap search transport error: {e}") from e
+        raise KoreaBusApiError(f"KakaoMap search transport error: {e}") from e
 
     soup = BeautifulSoup(body, "html.parser")
     results: dict[str, dict[str, Any]] = {}
@@ -115,11 +115,11 @@ async def fetch_stop_routes(
         async with asyncio.timeout(10):
             async with session.get(url, headers=KAKAO_HEADERS) as r:
                 if r.status != 200:
-                    raise KakaoBusApiError(
+                    raise KoreaBusApiError(
                         f"KakaoMap stationInfo HTTP {r.status} for stop={stop_id}")
                 body = await r.text()
     except (asyncio.TimeoutError, aiohttp.ClientError) as e:
-        raise KakaoBusApiError(
+        raise KoreaBusApiError(
             f"KakaoMap stationInfo transport error for stop={stop_id}: {e}") from e
 
     soup = BeautifulSoup(body, "html.parser")
@@ -152,14 +152,14 @@ async def fetch_arrivals(
         async with asyncio.timeout(10):
             async with session.get(url, headers=headers) as r:
                 if r.status != 200:
-                    raise KakaoBusApiError(
+                    raise KoreaBusApiError(
                         f"KakaoMap arrivals HTTP {r.status} for stop={stop_id}")
                 data = await r.json(content_type=None)
     except (asyncio.TimeoutError, aiohttp.ClientError) as e:
-        raise KakaoBusApiError(
+        raise KoreaBusApiError(
             f"KakaoMap arrivals transport error for stop={stop_id}: {e}") from e
     except ValueError as e:
-        raise KakaoBusApiError(
+        raise KoreaBusApiError(
             f"KakaoMap arrivals returned non-JSON for stop={stop_id}: {e}") from e
 
     items = (data or {}).get("busesList") or []

@@ -1,8 +1,14 @@
-"""Kakao Bus sub-module constants."""
+"""Korea Bus sub-module constants.
+
+Data source: KakaoMap mobile.  We keep the `KAKAO_*` prefix on the URL/
+header constants because they refer to the actual remote endpoints; the
+*public-facing* identifiers (domain, classes, entity IDs) use `korea_bus`
+so the integration name is decoupled from the underlying backend.
+"""
 KAKAO_ARRIVALS_URL = "https://m.map.kakao.com/actions/busesInBusStopJson"
 KAKAO_SEARCH_URL = "https://m.map.kakao.com/actions/searchView"
 KAKAO_STATION_URL = "https://m.map.kakao.com/actions/busStationInfo"
-KAKAO_BUS_SCAN_INTERVAL = 60
+KOREA_BUS_SCAN_INTERVAL = 60
 
 KAKAO_HEADERS = {
     "User-Agent": (

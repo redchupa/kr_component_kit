@@ -1,4 +1,4 @@
-"""Kakao Bus arrival sensors — TIMESTAMP based."""
+"""Korea Bus arrival sensors — TIMESTAMP based."""
 from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -51,7 +51,7 @@ def _format_collect_dt(raw: Any) -> str:
         return str(raw)
 
 
-class KakaoBusArrivalSensor(CoordinatorEntity, SensorEntity):
+class KoreaBusArrivalSensor(CoordinatorEntity, SensorEntity):
     """One sensor per (stop, route, slot).  slot 0 = next, slot 1 = the one after."""
 
     _attr_has_entity_name = True
@@ -65,7 +65,7 @@ class KakaoBusArrivalSensor(CoordinatorEntity, SensorEntity):
         self._k = _KEYS[index]
         suffix = "now" if index == 0 else "next"
         self._attr_unique_id = (
-            f"{DOMAIN}_kakao_bus_{coordinator.stop_id}_{route}_{suffix}"
+            f"{DOMAIN}_korea_bus_{coordinator.stop_id}_{route}_{suffix}"
         )
         self._attr_name = f"{route} 다음" if index == 0 else f"{route} 다다음"
         self._attr_device_info = device_info

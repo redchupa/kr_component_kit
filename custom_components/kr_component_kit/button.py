@@ -21,15 +21,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry,
             di = seoul_bus_station_device(st["ars_id"], st.get("station_name") or st["ars_id"])
             entities.append(SeoulBusRefreshButton(coord, di))
 
-    elif etype == ENTRY_KAKAO_BUS:
-        from .kakao_bus.button import KakaoBusRefreshButton
-        from .kakao_bus.device import kakao_bus_station_device
+    elif etype == ENTRY_KOREA_BUS:
+        from .korea_bus.button import KoreaBusRefreshButton
+        from .korea_bus.device import korea_bus_station_device
         for stop in store.get("stops", []):
             coord = store["coordinators"].get(stop["stop_id"])
             if not coord:
                 continue
-            di = kakao_bus_station_device(stop["stop_id"], stop.get("stop_name") or stop["stop_id"])
-            entities.append(KakaoBusRefreshButton(coord, di))
+            di = korea_bus_station_device(stop["stop_id"], stop.get("stop_name") or stop["stop_id"])
+            entities.append(KoreaBusRefreshButton(coord, di))
 
     if entities:
         async_add_entities(entities)
