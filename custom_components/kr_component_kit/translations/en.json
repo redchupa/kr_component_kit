@@ -271,7 +271,7 @@
       }
     },
     "error": {
-      "cannot_connect": "Could not reach the API. ({error})",
+      "cannot_connect": "Could not reach the API. Check your internet connection and try again.",
       "invalid_api_key": "API key is not valid.",
       "invalid_ars_format": "ARS-ID must be a 5-digit number (e.g. 23288). Found on the bus stop sign. Don't paste the longer KakaoMap busStopId here.",
       "no_arrivals_yet": "No upcoming buses at this stop, or the ARS-ID is wrong. Double-check the 5-digit number on the stop sign, then try again. (At late-night hours, valid stops may briefly return no arrivals.)",
@@ -365,7 +365,7 @@
       }
     },
     "error": {
-      "cannot_connect": "Could not reach the API. ({error})",
+      "cannot_connect": "Could not reach the API. Check your internet connection and try again.",
       "invalid_api_key": "API key is not valid.",
       "invalid_ars_format": "ARS-ID must be a 5-digit number (e.g. 23288). Found on the bus stop sign.",
       "no_arrivals_yet": "No upcoming buses at this stop, or the ARS-ID is wrong. Double-check the 5-digit number on the stop sign, then try again.",
