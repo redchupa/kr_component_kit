@@ -245,6 +245,146 @@ All three live under `data.go.kr`, operating agency **Korea Meteorological Admin
 **Finding a KakaoMap bus stop ID** *(for bus registration)*:
 [KakaoMap](https://map.kakao.com) → search for the stop → click it → URL becomes `?busstopid=03171&...` → **copy the value after `busstopid=`** (e.g., `03171`, `BS09013700`).
 
+**Finding a Seoul Bus ARS-ID** *("Seoul Bus" menu)*:
+[bus.go.kr](https://bus.go.kr) or the 5-digit number printed on the bus-stop sign itself (e.g., `23288` for 사당역).
+
+---
+
+### 🚌 Seoul Bus — API key guide (5 min)
+
+| Field | Value |
+|---|---|
+| 🌐 Portal | [Public Data Portal (data.go.kr)](https://www.data.go.kr) |
+| 🔎 Direct link | [👉 서울특별시_정류소정보조회 서비스](https://www.data.go.kr/data/15000303/openapi.do) |
+| Provider | Seoul Metropolitan Government |
+| Exact dataset name | **서울특별시_정류소정보조회 서비스** |
+| Endpoint called by code | `ws.bus.go.kr/api/rest/stationinfo/getStationByUid` |
+| Daily call limit | 1,000 (plenty — activation switch keeps polling targeted) |
+
+**Steps**:
+1. Sign up at data.go.kr, click the link above
+2. On the dataset page → **활용신청** (Use Application) → fill the form (auto-approved dataset; no IP registration needed)
+3. My Page → Open API → Auth keys → copy the **일반 인증키** (regular auth key) value
+
+> ⚠️ **Important — keys take ~24 hours to activate.**
+>
+> Even after the portal shows "처리상태: 승인" (status: approved) and "활용기간: 오늘부터" (effective today), the actual API gateway's auth module needs **~24 more hours** to register the key.  If you see "API key is not valid" right after applying, that's expected — **come back the next day and retry**.
+>
+> If still failing after 24 h:
+> - Verify the dataset name is exactly **서울특별시_정류소정보조회 서비스** (similarly-named datasets exist)
+> - Call data.go.kr support at **1566-0025**
+> - Or unregister + re-apply on My Page (gets a fresh key)
+
+---
+
+### 🔌 Activation switch — shared between Seoul Bus / Korea Bus
+
+Both flows create a `switch.<flow>_<id>_update_active` entity per stop. The coordinator only polls the API **while this switch is ON**. When OFF it keeps the last fetched data on the entities and skips the API call entirely.
+
+**Why useful**:
+- Saves daily-quota calls (especially Seoul Bus 1,000/day limit)
+- No reason to poll at 4 AM or while you're away
+- HA automations can flip it on/off precisely when needed
+
+**Defaults**:
+- Fresh install → **starts ON** (data shows up immediately)
+- After restart → RestoreEntity restores the user's last ON/OFF choice
+
+**Automation example — poll only during commute windows + proximity**:
+
+```yaml
+alias: Toggle bus polling by time + distance
+mode: restart
+triggers:
+  - at: "06:30:00"          # morning commute window opens
+    id: morning_on_time
+    trigger: time
+  - entity_id: sensor.<distance-to-stop>
+    above: 1000
+    id: morning_off_dist
+    trigger: numeric_state
+  - at: "17:30:00"
+    id: evening_on_time
+    trigger: time
+  - entity_id: sensor.<distance-to-stop>
+    below: 200
+    id: evening_off_dist
+    trigger: numeric_state
+actions:
+  - choose:
+      - conditions:                                # morning + workday + near home
+          - condition: trigger
+            id: morning_on_time
+          - condition: state
+            entity_id: binary_sensor.workday_sensor
+            state: "on"
+          - condition: numeric_state
+            entity_id: sensor.<distance-to-stop>
+            below: 200
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: switch.seoul_bus_*****_update_active
+      - conditions:                                # moved away from stop → OFF
+          - condition: trigger
+            id: morning_off_dist
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: switch.seoul_bus_*****_update_active
+      - conditions:                                # evening commute opens
+          - condition: trigger
+            id: evening_on_time
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: switch.seoul_bus_*****_update_active
+      - conditions:                                # arrived home → OFF
+          - condition: trigger
+            id: evening_off_dist
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: switch.seoul_bus_*****_update_active
+```
+
+→ Zero API calls outside commute windows.
+
+**Conditional dashboard card** (with HACS `state-switch`):
+```yaml
+type: custom:state-switch
+entity: switch.seoul_bus_*****_update_active
+states:
+  on:
+    type: entities
+    entities:
+      - sensor.seoul_bus_*****_*****_now
+      - sensor.seoul_bus_*****_*****_next
+      - button.seoul_bus_*****_refresh
+  off:
+    type: custom:button-card
+    color_type: blank-card     # card disappears when switch is OFF
+```
+
+---
+
+### ⚙️ Stop management (Seoul Bus / Korea Bus)
+
+You don't need to delete-and-re-register to add stops or change routes:
+
+**Settings → Devices & Services → "한국 컴포넌트 키트" card → "Configure"** → menu:
+
+| Menu item | Action |
+|---|---|
+| 🚏 Add stop | New stop (Seoul: enter ARS-ID / Korea Bus: search by name) |
+| 🗑 Remove stop(s) | Multi-select |
+| 🚌 Edit routes for a stop | Change which routes get tracked for an existing stop |
+| 🔑 Change API key (Seoul only) | Live-validates the new key before saving |
+| ⏱ Change poll interval (Korea Bus only) | 30 s ~ 1 h |
+| ✅ Save & Finish | Commit all changes + auto-reload |
+
+Closing with the X discards pending edits (transactional pattern).
+
 ---
 
 ## ⚙️ Registration & reconfiguration

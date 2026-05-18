@@ -254,6 +254,147 @@ curl -s https://api.ipify.org
 
 ---
 
+### 🚌 서울버스 — API 키 발급 가이드 (5분)
+
+| 항목 | 값 |
+|---|---|
+| 🌐 포털 | [공공데이터포털 (data.go.kr)](https://www.data.go.kr) |
+| 🔎 바로 검색 | [👉 서울특별시_정류소정보조회 서비스](https://www.data.go.kr/data/15000303/openapi.do) |
+| 운영기관 | 서울특별시 |
+| 데이터셋명 | **서울특별시_정류소정보조회 서비스** |
+| 코드 호출 endpoint | `ws.bus.go.kr/api/rest/stationinfo/getStationByUid` |
+| 일일 호출 한도 | 1,000회 (충분 — 1분 폴링이면 1,440/일 이지만 활성화 스위치로 제어) |
+
+**신청 단계**:
+1. data.go.kr 회원가입 → 위 "👉 바로 검색" 링크 클릭
+2. 상세 페이지 → **활용신청** 버튼 → 폼 작성 (자동승인 dataset이라 별도 IP 등록 불필요)
+3. 마이페이지 → 오픈API → 인증키 발급현황 → **일반 인증키** 값 복사
+
+> ⚠️ **중요 — 키 활성화에 약 24시간 소요됩니다.**
+>
+> 마이페이지에 "처리상태: 승인" + "활용기간: 오늘부터" 로 표시되어도, **실제 API gateway 의 인증모듈에 키가 등록되기까지 약 24시간 추가 대기**가 필요합니다. 발급 직후 HA 통합 추가 시 "API 키가 유효하지 않습니다" 메시지가 나와도 정상이며, **다음날 같은 시각 재시도하시면 됩니다**.
+>
+> 24시간 후에도 같은 에러면:
+> - 활용신청 데이터셋 이름이 정확히 **"서울특별시_정류소정보조회 서비스"** 인지 재확인 (비슷한 이름의 다른 dataset이 있음)
+> - data.go.kr 고객센터 1566-0025 문의
+> - 또는 마이페이지에서 활용신청 해제 → 재신청
+
+---
+
+### 🔌 활성화 스위치 — 서울버스 / 한국 버스 공통 신규 기능
+
+두 통합 모두 정류장마다 **`switch.<flow>_<id>_update_active`** 스위치가 자동 생성됩니다. **ON 일 때만** API를 호출하고, **OFF 일 때는** 직전 데이터를 그대로 유지하면서 호출을 건너뜁니다.
+
+**왜 이게 유용한가?**
+- API 호출 한도 절감 (특히 서울버스 1,000/일 한도)
+- 새벽 또는 외출 중일 때 굳이 폴링 안 함
+- HA 자동화로 "필요할 때만" 정밀 제어
+
+**default 동작**:
+- 신규 설치 → **ON 으로 시작** (데이터 즉시 보임)
+- 재시작 시 → 마지막 ON/OFF 상태 자동 복원
+
+**자동화 예시 — 출퇴근 시간 + 거리 조건만 폴링**:
+
+```yaml
+alias: 출퇴근 버스 도착정보 폴링 제어
+mode: restart
+triggers:
+  - at: "06:30:00"          # 출근 시간
+    id: morning_on_time
+    trigger: time
+  - entity_id: sensor.<집-정류장-거리>   # 거리 sensor (proximity 또는 template)
+    above: 1000
+    id: morning_off_dist
+    trigger: numeric_state
+  - at: "17:30:00"          # 퇴근 시간
+    id: evening_on_time
+    trigger: time
+  - entity_id: sensor.<집-정류장-거리>
+    below: 200
+    id: evening_off_dist
+    trigger: numeric_state
+actions:
+  - choose:
+      # 출근시간 + 평일 + 집 근처 → ON
+      - conditions:
+          - condition: trigger
+            id: morning_on_time
+          - condition: state
+            entity_id: binary_sensor.workday_sensor
+            state: "on"
+          - condition: numeric_state
+            entity_id: sensor.<집-정류장-거리>
+            below: 200
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: switch.seoul_bus_*****_update_active
+      # 출근 후 멀어지면 → OFF
+      - conditions:
+          - condition: trigger
+            id: morning_off_dist
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: switch.seoul_bus_*****_update_active
+      # 퇴근시간 + 회사 근처 → ON
+      - conditions:
+          - condition: trigger
+            id: evening_on_time
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: switch.seoul_bus_*****_update_active
+      # 집 도착 → OFF
+      - conditions:
+          - condition: trigger
+            id: evening_off_dist
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: switch.seoul_bus_*****_update_active
+```
+
+→ 평소엔 API 호출 0회, 출근/퇴근 시간에만 폴링.
+
+**대시보드 조건부 표시** (HACS `state-switch` 카드 추천):
+```yaml
+type: custom:state-switch
+entity: switch.seoul_bus_*****_update_active
+states:
+  on:
+    type: entities
+    entities:
+      - sensor.seoul_bus_*****_*****_now
+      - sensor.seoul_bus_*****_*****_next
+      - button.seoul_bus_*****_refresh
+  off:
+    type: custom:button-card
+    color_type: blank-card    # 스위치 OFF면 카드 자체 안 보임
+```
+
+---
+
+### ⚙️ 정류장 관리 (서울버스 / 한국 버스 공통)
+
+통합 추가 후 정류장을 더 추가하거나 노선을 편집하려면 **삭제·재등록 필요 없습니다**:
+
+**설정 → 기기 및 서비스 → "한국 컴포넌트 키트" 카드 → "구성" 버튼** → 메뉴 등장:
+
+| 메뉴 | 동작 |
+|---|---|
+| 🚏 정류장 추가 | 새 정류장 등록 (서울: ARS-ID 입력 / 한국 버스: 이름 검색) |
+| 🗑 정류장 삭제 | 복수 선택 가능 |
+| 🚌 정류장 노선 편집 | 기존 정류장에서 추적할 노선 변경 |
+| 🔑 API 키 변경 (서울버스만) | 새 키 입력 시 저장 직전 자동 검증 |
+| ⏱ 폴링 주기 변경 (한국 버스만) | 30초 ~ 1시간 |
+| ✅ 저장 후 종료 | 변경 사항 일괄 저장 + 자동 reload |
+
+X 닫기 시 변경 사항 무효 (transactional 패턴).
+
+---
+
 ## ⚙️ 등록·재설정 흐름
 
 ### 새 항목 등록
