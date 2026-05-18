@@ -68,6 +68,31 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # All non-kakao_bus entries just bump their version forward —
             # nothing else changed in the v1->v2 step.
             hass.config_entries.async_update_entry(entry, version=2)
+
+    if entry.version == 2:
+        # v2 -> v3 (v4.6.0): rename the activation switch suffix from
+        # `_api_active` to `_update_active` for both seoul_bus and
+        # korea_bus.  The old "_api_active" name was misleading on
+        # korea_bus (no API key involved) and confused users.
+        # Bus entries get their entity_id + unique_id rewritten; other
+        # entry types just bump.
+        etype = entry.data.get(CONF_ENTRY_TYPE)
+        if etype in ("seoul_bus", "korea_bus"):
+            from homeassistant.helpers import entity_registry as er
+            ent_reg = er.async_get(hass)
+            for ent in er.async_entries_for_config_entry(
+                    ent_reg, entry.entry_id):
+                if ent.unique_id.endswith("_api_active"):
+                    new_unique = ent.unique_id.replace(
+                        "_api_active", "_update_active")
+                    new_entity = ent.entity_id.replace(
+                        "_api_active", "_update_active")
+                    ent_reg.async_update_entity(
+                        ent.entity_id,
+                        new_unique_id=new_unique,
+                        new_entity_id=new_entity,
+                    )
+        hass.config_entries.async_update_entry(entry, version=3)
     return True
 
 

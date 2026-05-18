@@ -31,10 +31,11 @@ _REGION_GRID = {
 }
 
 class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    # VERSION 2 — bumped when ENTRY_KAKAO_BUS was renamed to ENTRY_KOREA_BUS
-    # (v4.4.0).  Bumping triggers async_migrate_entry in __init__.py for any
-    # entries created under the old name.
-    VERSION = 2
+    # VERSION history
+    # 2 (v4.4.0): ENTRY_KAKAO_BUS renamed to ENTRY_KOREA_BUS
+    # 3 (v4.6.0): bus activation switch entity suffix renamed
+    #             from `_api_active` to `_update_active`
+    VERSION = 3
 
     def __init__(self):
         self._data: dict[str, Any] = {}

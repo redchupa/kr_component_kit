@@ -19,19 +19,20 @@ class SeoulBusActiveSwitch(SwitchEntity, RestoreEntity):
     """Gate flag for the coordinator's polling loop."""
 
     _attr_has_entity_name = True
-    _attr_icon = "mdi:api"
+    _attr_icon = "mdi:autorenew"
     _attr_name = "업데이트 활성화"
 
     def __init__(self, coordinator, device_info) -> None:
         self._coordinator = coordinator
+        # v4.6.0: suffix renamed from _api_active to _update_active so the
+        # entity id reads naturally for both seoul_bus (uses an API key)
+        # and korea_bus (no key — the old "_api_active" was misleading).
+        # Migration in __init__.async_migrate_entry rewrites old entities.
         self._attr_unique_id = (
-            f"{DOMAIN}_seoul_bus_{coordinator.ars_id}_api_active"
+            f"{DOMAIN}_seoul_bus_{coordinator.ars_id}_update_active"
         )
-        # Explicit entity_id keeps automations portable — matches the entity
-        # ID convention shipped by Murianwind/seoul_bus so existing user
-        # automations from that fork keep working unchanged.
         self.entity_id = (
-            f"switch.seoul_bus_{slugify(coordinator.ars_id)}_api_active"
+            f"switch.seoul_bus_{slugify(coordinator.ars_id)}_update_active"
         )
         self._attr_device_info = device_info
         # Default ON for fresh installs — users expect data immediately

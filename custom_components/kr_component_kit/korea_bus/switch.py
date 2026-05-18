@@ -14,16 +14,17 @@ class KoreaBusActiveSwitch(SwitchEntity, RestoreEntity):
     """Gate flag for the coordinator's polling loop."""
 
     _attr_has_entity_name = True
-    _attr_icon = "mdi:api"
+    _attr_icon = "mdi:autorenew"
     _attr_name = "업데이트 활성화"
 
     def __init__(self, coordinator, device_info) -> None:
         self._coordinator = coordinator
+        # v4.6.0: see seoul_bus/switch.py for rename rationale.
         self._attr_unique_id = (
-            f"{DOMAIN}_korea_bus_{coordinator.stop_id}_api_active"
+            f"{DOMAIN}_korea_bus_{coordinator.stop_id}_update_active"
         )
         self.entity_id = (
-            f"switch.korea_bus_{slugify(coordinator.stop_id)}_api_active"
+            f"switch.korea_bus_{slugify(coordinator.stop_id)}_update_active"
         )
         self._attr_device_info = device_info
         # Default ON for fresh installs — RestoreEntity overrides this
