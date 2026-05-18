@@ -208,7 +208,8 @@ async def validate_api_key(
         # ("SERVICE_KEY_IS_NOT_REGISTERED"), and Korean ("Key인증실패").
         # The list below was assembled after probing the live API with
         # an unactivated key — both forms were observed.  Freshly-issued
-        # data.go.kr keys can take up to ~1h to activate, which the
+        # data.go.kr keys take **~24 hours** to activate (verified
+        # 2026-05-18 against a user-reported live key), which the
         # invalid_api_key UI message points users toward.
         if any(kw in msg for kw in (
             "SERVICE KEY IS NOT REGISTERED",
