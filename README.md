@@ -395,6 +395,40 @@ X 닫기 시 변경 사항 무효 (transactional 패턴).
 
 ---
 
+### 🎁 블루프린트 4종 — 한 번 import 로 자동화 완성
+
+공공데이터 활용사례 빈도순 상위 4개 (하차알람 / 출발알람 / 막차알람 / 만차혼잡)를 **HA 블루프린트** 로 제공합니다. GitHub URL 한 번 import → UI 에서 sensor / 디바이스만 선택 → 자동화 끝.
+
+| 블루프린트 | 트리거 | 용도 |
+|---|---|---|
+| 🚌 **출발 알람** | `native_value (TIMESTAMP)` 가 N분 이내 진입 | 정류장까지 도보 N분 → "지금 출발하세요" 푸시 |
+| 🔔 **하차 알람** | sensor 의 `current_stop` attribute 가 변경 | 탑승 중 지정 정류장 N개 전 도달 시 푸시 ("내릴 정거장입니다") |
+| 🌙 **막차 알람** | `last_vehicle` / `is_last` attribute | 막차 운행 시 푸시 ("이번 차가 막차입니다") |
+| 🚨 **만차 / 혼잡 알람** | 만차 binary_sensor ON + `congestion` 변화 | 만차 시 다음 차 도착시간 푸시 (서울버스 전용) |
+
+**Import 방법 (UI 한 번에)**:
+
+1. HA → 설정 → 자동화 → 블루프린트 → **블루프린트 가져오기**
+2. 아래 URL 중 원하는 자동화 URL 붙여넣기 → **미리보기** → **블루프린트 가져오기**
+
+```
+출발 알람: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_departure_alert.yaml
+하차 알람: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_alight_alert.yaml
+막차 알람: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_lastride_alert.yaml
+만차/혼잡 알람: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_crowded_alert.yaml
+```
+
+3. **자동화 만들기** → 블루프린트 선택 → sensor + 디바이스 + 분 등 입력 → 저장
+
+> 💡 모바일 푸시는 **HA Companion App** (iOS / Android) 가 설치된 디바이스의 `notify.mobile_app_<폰_이름>` 서비스를 사용합니다. 폰 이름은 설정 → 디바이스 → Companion App 등록 시 표시된 이름.
+
+활용사례:
+- 🌃 야간 외출 후 막차 알람 → 놓치면 택시
+- 🚌 출퇴근 시 만차 알람 → 다음 차 기다리거나 다른 노선 이용
+- 🛏 출근 시 출발 알람 → 정류장까지 도보 + 신호 대기 고려해서 알람 5분 전
+
+---
+
 ## ⚙️ 등록·재설정 흐름
 
 ### 새 항목 등록
@@ -435,8 +469,8 @@ X 닫기 시 변경 사항 무효 (transactional 패턴).
 | ⛽ 유가 | `전국 평균가`, `최저가` (등록한 시도×유종 조합마다) | `ranking[]` (Top 5 주유소 이름·가격·주소) |
 | 🏫 학교 | `급식`, `학교 정보` + calendar 학사일정/시간표 | 급식: `menu`, `calorie`, `allergy_codes` |
 | 🚌 대중교통 | `<역/정류장> ... 도착` (TIMESTAMP — HA가 "N분 후"로 자동 표시) | — |
-| 🚌 서울버스 | 노선당 도착 sensor 2개 (`<rtNm> 다음`, `<rtNm> 다다음`, TIMESTAMP) + 정류장당 새로고침 버튼 1개 | `vehicle_number`, `current_stop`, `message`, `remain_seat`, `direction`, `bus_type`, `status` ("곧 도착", "N분 후") |
-| 🚍 한국 버스 | 노선당 도착 sensor 2개 (`<번호> 다음`, `<번호> 다다음`, TIMESTAMP) + 정류장당 새로고침 버튼 1개 | `vehicle_number`, `current_stop`, `message`, `remain_seat`, `next_stop`, `first_time`/`last_time`/`intervals`, `bus_type`, `status` |
+| 🚌 서울버스 | **노선당**: 도착 sensor 2개 (`다음`/`다다음`, TIMESTAMP) + 저상버스 binary_sensor + 만차 binary_sensor. **정류장당**: 새로고침 버튼 + 업데이트 활성화 스위치 | `vehicle_no`, `current_stop`, `message`, `is_full`, `is_low_floor`, `bus_type` (일반/저상/굴절), `congestion` (여유/보통/혼잡), `passengers_aboard`, `remaining_seats`, `direction`, `status` |
+| 🚍 한국 버스 | **노선당**: 도착 sensor 2개. **정류장당**: 새로고침 버튼 + 업데이트 활성화 스위치 | `vehicle_number`, `current_stop`, `message`, `remain_seat`, `next_stop`, `first_time`/`last_time`/`intervals`, `bus_type`, `status` |
 
 ---
 

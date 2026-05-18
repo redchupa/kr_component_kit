@@ -1,0 +1,51 @@
+blueprint:
+  name: 🌙 막차 알람
+  description: >
+    선택한 버스 sensor 의 도착 정보가 **막차** 일 때 푸시 알림.
+
+    서울버스 응답의 `isLast1` 와 한국버스 응답의 `lastVehicle` 양쪽 모두 지원
+    (sensor 의 `last_vehicle` / `is_last` attribute 로 노출됨).
+  domain: automation
+  source_url: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_lastride_alert.yaml
+  input:
+    bus_sensor:
+      name: 버스 도착 sensor (slot 0 권장)
+      description: 예) sensor.seoul_bus_23288_2230_now
+      selector:
+        entity:
+          domain: sensor
+          device_class: timestamp
+    notify_service:
+      name: 알림 서비스 이름 (도메인 제외, 예 mobile_app_my_phone)
+      selector:
+        text:
+
+variables:
+  bus_sensor: !input bus_sensor
+  notify_service: !input notify_service
+
+trigger:
+  - platform: state
+    entity_id: !input bus_sensor
+    attribute: last_vehicle
+    to: "true"
+  - platform: state
+    entity_id: !input bus_sensor
+    attribute: is_last
+    to: "1"
+
+action:
+  - service: "notify.{{ notify_service }}"
+    data:
+      title: "🌙 막차 알람"
+      message: >
+        {{ state_attr(bus_sensor, 'friendly_name') or bus_sensor }} —
+        🚨 이번 차가 막차입니다!
+        {% set v = states(bus_sensor) %}
+        {% if v not in ['unknown', 'unavailable', 'none', None] %}
+          {% set delta = ((as_datetime(v) - now()).total_seconds() / 60) | round(0) %}
+          약 {{ delta }}분 후 도착. 지금 출발하세요.
+        {% endif %}
+
+mode: single
+max_exceeded: silent

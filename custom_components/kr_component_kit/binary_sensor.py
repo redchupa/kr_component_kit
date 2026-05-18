@@ -30,5 +30,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry,
         for st in store.get("stations", []):
             entities.append(AirAlertBinarySensor(c, st["stationName"], sido))
 
+    elif etype == ENTRY_SEOUL_BUS:
+        from .seoul_bus.binary_sensor import (
+            SeoulBusFullSensor, SeoulBusLowFloorSensor)
+        from .seoul_bus.device import seoul_bus_station_device
+        for st in store.get("stations", []):
+            coord = store["coordinators"].get(st["ars_id"])
+            if not coord:
+                continue
+            di = seoul_bus_station_device(
+                st["ars_id"], st.get("station_name") or st["ars_id"])
+            routes = st.get("routes") or list((coord.data or {}).keys())
+            for rt in routes:
+                entities.append(SeoulBusLowFloorSensor(coord, rt, di))
+                entities.append(SeoulBusFullSensor(coord, rt, di))
+
     if entities:
         async_add_entities(entities)

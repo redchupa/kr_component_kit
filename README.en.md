@@ -68,7 +68,7 @@ When ready, follow the [🔑 API Key Guide](#-api-key-guide) below to add the ot
 | ⛽ **Fuel** (유가) | Living | ✅ opinet.co.kr | Province-level avg / lowest-price stations |
 | 🏫 **School** (학교) | Living | ✅ open.neis.go.kr | Lunch menu, schedule, calendar |
 | 🚌 **Transit** (대중교통) | Living | Partial | Subway (Seoul) + bus by KakaoMap stop-ID. Single integration entry for both |
-| 🚌 **Seoul Bus** (서울버스) | Living | ✅ data.go.kr | Official Seoul Bus API (ARS-ID). Per-stop refresh button + add/remove stops in options |
+| 🚌 **Seoul Bus** (서울버스) | Living | ✅ data.go.kr | Official Seoul Bus API (ARS-ID). Per-route arrival sensors + **low-floor + full-bus binary_sensors** + per-stop refresh button + activation switch. Add/remove stops from options menu |
 | 🚍 **Korea Bus** (한국 버스) | Living | ❌ none | KakaoMap nationwide, **search by stop name**, configurable poll interval |
 
 > 💡 **All services are free.** Korean public APIs are gratis; this integration adds no payment of its own.
@@ -384,6 +384,35 @@ You don't need to delete-and-re-register to add stops or change routes:
 | ✅ Save & Finish | Commit all changes + auto-reload |
 
 Closing with the X discards pending edits (transactional pattern).
+
+---
+
+### 🎁 4 ready-made automation blueprints
+
+Top 4 use cases from Korea's public-data app catalog (get-off alert / departure alert / last-bus alert / full-bus alert) are shipped as **HA blueprints**.  Import once via URL → pick your sensor and notify target in the UI → automation done, no YAML needed.
+
+| Blueprint | Trigger | Use case |
+|---|---|---|
+| 🚌 **Departure alert** | `native_value (TIMESTAMP)` enters N-minute window | "Bus arrives in N min. Leave home now." push |
+| 🔔 **Get-off alert** | `current_stop` attribute changes | While on the bus, alert N stops before destination |
+| 🌙 **Last-bus alert** | `last_vehicle` / `is_last` attribute flips | "This is the last bus tonight" push |
+| 🚨 **Full / crowded alert** | full binary_sensor goes ON + `congestion` changes | Seoul Bus only — pings the next-bus ETA |
+
+**Import** (one-click via UI):
+
+1. HA → Settings → Automations → Blueprints → **Import Blueprint**
+2. Paste one of these URLs → **Preview** → **Import**
+
+```
+Departure:  https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_departure_alert.yaml
+Get-off:    https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_alight_alert.yaml
+Last bus:   https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_lastride_alert.yaml
+Full/crowd: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_crowded_alert.yaml
+```
+
+3. **Create Automation** → pick the blueprint → fill in sensor + notify target + minutes → Save
+
+> 💡 Push notifications use **HA Companion App** (iOS / Android) — the service name is `notify.mobile_app_<phone_name>` where `<phone_name>` is whatever you set during Companion App registration.
 
 ---
 

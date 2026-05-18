@@ -62,15 +62,44 @@ class SeoulBusArrivalSensor(CoordinatorEntity, SensorEntity):
         item = self._item()
         if not item:
             return {}
-        msg_key = "arrmsg1" if self._idx == 0 else "arrmsg2"
-        plain_key = "plainNo1" if self._idx == 0 else "plainNo2"
-        time_key = "traTime1" if self._idx == 0 else "traTime2"
+        idx = self._idx
+        msg_key = f"arrmsg{idx + 1}"
+        plain_key = f"plainNo{idx + 1}"
+        time_key = f"traTime{idx + 1}"
+        # Slot-aware keys for the new attrs (v4.7.0).  The official 활용
+        # guide names them with a trailing 1/2 — same convention as the
+        # other slot fields above.
+        full_key = f"isFullFlag{idx + 1}"
+        congestion_key = f"congestion{idx + 1}"
+        reride_key = f"rerideNum{idx + 1}"
+        remndr_key = f"remndrNmpr{idx + 1}"
+        bustype_key = f"busType{idx + 1}"
         seconds = _parse_int(item.get(time_key))
+
+        # Map per the activity guide:
+        # busType  — 0:일반, 1:저상, 2:굴절
+        # congestion — 3:여유, 4:보통, 5:혼잡
+        bus_type_label = {"0": "일반", "1": "저상", "2": "굴절"}.get(
+            str(item.get(bustype_key) or ""), "")
+        congestion_label = {"3": "여유", "4": "보통", "5": "혼잡"}.get(
+            str(item.get(congestion_key) or ""), "")
+
         attrs: dict[str, Any] = {
             "message": item.get(msg_key) or "정보 없음",
             "vehicle_no": item.get(plain_key) or "",
             "route_id": item.get("busRouteId") or "",
             "direction": item.get("nxtStn") or "",
+            # New in v4.7.0 — these come straight from getStationByUidItem
+            # and surface what users of 활용사례 buses-apps expect:
+            # congestion / full / seating / vehicle type for accessibility.
+            "is_full": str(item.get(full_key) or "") == "1",
+            "is_low_floor": str(item.get(bustype_key) or "") == "1",
+            "bus_type_code": item.get(bustype_key) or "",
+            "bus_type": bus_type_label,
+            "congestion_code": item.get(congestion_key) or "",
+            "congestion": congestion_label,
+            "passengers_aboard": _parse_int(item.get(reride_key)),
+            "remaining_seats": _parse_int(item.get(remndr_key)),
         }
         if seconds > 0:
             attrs["remaining_seconds"] = seconds

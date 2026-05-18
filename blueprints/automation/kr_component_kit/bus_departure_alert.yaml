@@ -1,0 +1,71 @@
+blueprint:
+  name: 🚌 출발 알람 (버스 도착 N분 전)
+  description: >
+    선택한 버스 도착 sensor 가 **지정한 N분 이내** 로 진입하면 푸시 알림을 보냅니다.
+
+    "정류장까지 도보 N분 → 지금 출발하세요" 자동화에 사용하세요.
+    서울버스 / 한국 버스 어느 쪽 sensor 든 동일하게 동작합니다.
+  domain: automation
+  source_url: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_departure_alert.yaml
+  input:
+    bus_sensor:
+      name: 버스 도착 sensor
+      description: >
+        도착 시간(TIMESTAMP) sensor 를 선택하세요.
+        예) sensor.seoul_bus_23288_2230_now / sensor.korea_bus_03171_350_now
+      selector:
+        entity:
+          domain: sensor
+          device_class: timestamp
+    leave_minutes:
+      name: 알림을 받을 N분 전
+      description: 정류장까지 도보 시간 + 여유분 (분 단위)
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 30
+          unit_of_measurement: 분
+          mode: slider
+    notify_service:
+      name: 알림 서비스 이름 (도메인 제외)
+      description: >
+        모바일 앱 notify 서비스 이름. 예) mobile_app_my_phone
+        (Settings → Devices → Companion App 등록 시 표시되는 이름. `notify.` 접두사 제외)
+      selector:
+        text:
+
+variables:
+  bus_sensor: !input bus_sensor
+  leave_minutes: !input leave_minutes
+  notify_service: !input notify_service
+
+trigger:
+  - platform: time_pattern
+    minutes: "/1"
+
+condition:
+  - condition: template
+    value_template: >-
+      {% set v = states(bus_sensor) %}
+      {% if v in ['unknown', 'unavailable', 'none', None] %}
+        false
+      {% else %}
+        {% set delta = (as_datetime(v) - now()).total_seconds() %}
+        {{ delta > 0 and delta <= (leave_minutes | int) * 60 }}
+      {% endif %}
+
+action:
+  - service: "notify.{{ notify_service }}"
+    data:
+      title: "🚌 버스 출발 시간"
+      message: >
+        {{ state_attr(bus_sensor, 'friendly_name') or bus_sensor }} —
+        {% set v = states(bus_sensor) %}
+        {% set delta = ((as_datetime(v) - now()).total_seconds() / 60) | round(0) %}
+        약 {{ delta }}분 후 도착. 지금 출발하세요!
+        {% set msg = state_attr(bus_sensor, 'message') %}
+        {% if msg %} ({{ msg }}){% endif %}
+
+mode: single
+max_exceeded: silent

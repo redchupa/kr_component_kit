@@ -1,0 +1,61 @@
+blueprint:
+  name: 🔔 하차 알람 (탑승 중 목적지 도달)
+  description: >
+    탑승 중인 버스 sensor 의 `current_stop` attribute 가 **목적지 정류장 이름** 을
+    포함하면 푸시 알림을 보냅니다. 잠들거나 영상 보다가 내릴 정거장을 놓치는
+    일을 막아줍니다.
+
+    > ⚠️ **이 자동화는 사용자가 직접 enable/disable 하는 것을 가정합니다.**
+    > 자동화 자체를 켜고 끄거나, "탑승 중" input_boolean 헬퍼를 추가 조건으로
+    > 결합하세요.
+
+    서울버스 sensor 가 `current_stop` 을 가장 정확히 제공합니다 (한국 버스도
+    동작하지만 카카오맵 응답 정확도가 상황에 따라 다름).
+  domain: automation
+  source_url: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_alight_alert.yaml
+  input:
+    bus_sensor:
+      name: 탑승 중인 버스 도착 sensor
+      description: >
+        예) sensor.seoul_bus_23288_2230_now
+      selector:
+        entity:
+          domain: sensor
+          device_class: timestamp
+    destination_stop_name:
+      name: 목적지 정류장 이름
+      description: >
+        부분 일치 OK. 예: "강남역" 입력 시 "강남역.2호선" 도 매치.
+      selector:
+        text:
+    notify_service:
+      name: 알림 서비스 이름 (도메인 제외, 예 mobile_app_my_phone)
+      selector:
+        text:
+
+variables:
+  bus_sensor: !input bus_sensor
+  destination_stop_name: !input destination_stop_name
+  notify_service: !input notify_service
+
+trigger:
+  - platform: state
+    entity_id: !input bus_sensor
+    attribute: current_stop
+
+condition:
+  - condition: template
+    value_template: >-
+      {% set cur = trigger.to_state.attributes.current_stop | default('') %}
+      {{ destination_stop_name and destination_stop_name in cur }}
+
+action:
+  - service: "notify.{{ notify_service }}"
+    data:
+      title: "🔔 하차 알람"
+      message: >
+        🚏 곧 {{ destination_stop_name }} 도착! 하차 준비하세요.
+        (현재 정류장: {{ trigger.to_state.attributes.current_stop }})
+
+mode: single
+max_exceeded: silent

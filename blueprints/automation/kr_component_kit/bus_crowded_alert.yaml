@@ -1,0 +1,75 @@
+blueprint:
+  name: 🚨 만차 / 혼잡 알람 (다음 차 추천)
+  description: >
+    선택한 노선의 **만차 binary_sensor** 가 ON 되면 푸시 알림 (다음 차 도착시간 포함).
+    혼잡도(congestion) 도 같이 체크할지 옵션으로 선택.
+
+    > ⚠️ **서울버스 sensor 만 지원** — 한국 버스(카카오맵)는 만차/혼잡 데이터가
+    > 응답에 없습니다.
+  domain: automation
+  source_url: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_crowded_alert.yaml
+  input:
+    full_binary_sensor:
+      name: 만차 binary_sensor (서울버스 전용)
+      description: 예) binary_sensor.seoul_bus_23288_2230_full
+      selector:
+        entity:
+          domain: binary_sensor
+    next_bus_sensor:
+      name: 다음 도착 sensor (slot 1)
+      description: 예) sensor.seoul_bus_23288_2230_next
+      selector:
+        entity:
+          domain: sensor
+          device_class: timestamp
+    also_alert_on_congestion:
+      name: '"혼잡" 단계일 때도 알림'
+      description: 만차가 아니어도 혼잡도가 "혼잡" 으로 바뀌면 알림
+      default: true
+      selector:
+        boolean:
+    notify_service:
+      name: 알림 서비스 이름 (도메인 제외, 예 mobile_app_my_phone)
+      selector:
+        text:
+
+variables:
+  full_binary_sensor: !input full_binary_sensor
+  next_bus_sensor: !input next_bus_sensor
+  also_alert_on_congestion: !input also_alert_on_congestion
+  notify_service: !input notify_service
+
+trigger:
+  - platform: state
+    entity_id: !input full_binary_sensor
+    from: "off"
+    to: "on"
+  - platform: state
+    entity_id: !input full_binary_sensor
+    attribute: congestion
+    to: "혼잡"
+
+condition:
+  - condition: template
+    value_template: >-
+      {% set is_full = is_state(full_binary_sensor, 'on') %}
+      {% set is_crowded = state_attr(full_binary_sensor, 'congestion') == '혼잡' %}
+      {{ is_full or (also_alert_on_congestion and is_crowded) }}
+
+action:
+  - service: "notify.{{ notify_service }}"
+    data:
+      title: "🚨 이번 버스 만차 / 혼잡"
+      message: >
+        {% set status = '만차' if is_state(full_binary_sensor, 'on')
+                        else state_attr(full_binary_sensor, 'congestion') %}
+        🚏 {{ state_attr(next_bus_sensor, 'friendly_name') or next_bus_sensor }} —
+        이번 버스: **{{ status }}**.
+        {% set next = states(next_bus_sensor) %}
+        {% if next not in ['unknown', 'unavailable', 'none', None] %}
+          {% set delta = ((as_datetime(next) - now()).total_seconds() / 60) | round(0) %}
+          다음 차: 약 {{ delta }}분 후 도착.
+        {% endif %}
+
+mode: single
+max_exceeded: silent

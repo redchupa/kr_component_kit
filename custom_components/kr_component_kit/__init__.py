@@ -20,7 +20,7 @@ PLATFORM_MAP = {
     ENTRY_AIRKOREA: [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.EVENT, Platform.CALENDAR],
     ENTRY_KMA_WEATHER: [Platform.WEATHER],
     ENTRY_EARTHQUAKE: [Platform.EVENT],
-    ENTRY_SEOUL_BUS: [Platform.SENSOR, Platform.BUTTON, Platform.SWITCH],
+    ENTRY_SEOUL_BUS: [Platform.SENSOR, Platform.BUTTON, Platform.SWITCH, Platform.BINARY_SENSOR],
     ENTRY_KOREA_BUS: [Platform.SENSOR, Platform.BUTTON, Platform.SWITCH],
 }
 
