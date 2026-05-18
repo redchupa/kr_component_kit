@@ -34,10 +34,12 @@ class SeoulBusActiveSwitch(SwitchEntity, RestoreEntity):
             f"switch.seoul_bus_{slugify(coordinator.ars_id)}_api_active"
         )
         self._attr_device_info = device_info
-        # Default OFF — RestoreEntity will overwrite from the last saved
-        # state on async_added_to_hass.  Starting from OFF means a fresh
-        # install needs an explicit ON click before polling starts.
-        self._attr_is_on = False
+        # Default ON for fresh installs — users expect data immediately
+        # after registering a stop, not after hunting for a hidden
+        # switch.  RestoreEntity will overwrite from the last saved
+        # state on async_added_to_hass, so users who deliberately turned
+        # it OFF before a restart get their preference back.
+        self._attr_is_on = True
 
     async def async_added_to_hass(self) -> None:
         """Restore last on/off state and sync coordinator flag."""

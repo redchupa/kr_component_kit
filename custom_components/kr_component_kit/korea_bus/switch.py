@@ -26,7 +26,9 @@ class KoreaBusActiveSwitch(SwitchEntity, RestoreEntity):
             f"switch.korea_bus_{slugify(coordinator.stop_id)}_api_active"
         )
         self._attr_device_info = device_info
-        self._attr_is_on = False
+        # Default ON for fresh installs — RestoreEntity overrides this
+        # from the saved state if one exists.  Matches seoul_bus.
+        self._attr_is_on = True
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
