@@ -416,6 +416,37 @@ Full/crowd: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/au
 
 ---
 
+### 📱 4 location-aware blueprints — leverages HA Companion App device tracking
+
+Use the **device_tracker** from your phone (auto-tracked by Companion App) to build automations a regular bus app can't.
+
+| Blueprint | What it does |
+|---|---|
+| 🚏 **Proximity-based polling toggle** | Phone enters bus-stop zone → activation switch ON; leaves → OFF after N min |
+| 🏠 **Leaving-home alert** | Phone leaves `zone.home` → push the next bus ETA |
+| 📍 **Destination-arrival get-off alert** | Phone enters destination zone → push ("get ready to get off") — **catches you even if you fell asleep on the bus** |
+| 🌍 **Auto commute mode** | Time + location → switch auto ON/OFF (mirrors the upstream Murianwind/seoul_bus automation pattern) |
+
+**Prerequisite — make the zones**:
+1. HA → Settings → **Areas & Zones** → Add Zone
+2. Enter the lat/lon of the bus stop (or office/school) — find on [KakaoMap](https://map.kakao.com)
+3. Radius: 100–200 m for stops, 200–300 m for workplaces
+
+**Import URLs**:
+```
+Proximity toggle:    https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/stop_proximity_toggle.yaml
+Leaving-home alert:  https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/leaving_home_alert.yaml
+Arrival alight alert:https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/arrival_alight_alert.yaml
+Commute auto mode:   https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/commute_auto_mode.yaml
+```
+
+Compose them:
+- Proximity toggle + leaving-home alert → polling starts automatically when you head out, plus the next bus ETA push
+- Arrival alight alert → no more missed stops if you doze off on the bus
+- Commute auto mode → polls only when you're realistically using the bus (saves daily-quota calls)
+
+---
+
 ## ⚙️ Registration & reconfiguration
 
 ### Adding a new entry

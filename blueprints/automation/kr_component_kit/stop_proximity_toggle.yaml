@@ -1,0 +1,88 @@
+blueprint:
+  name: 🚏 정류장 근처 자동 활성화 (위치 기반 폴링 ON/OFF)
+  description: >
+    핸드폰(device_tracker)이 **정류장 zone 에 들어가면** 활성화 스위치를
+    켜고, **zone 을 떠나면 N분 후 끕니다**.
+
+    원리: HA Companion App 이 추적하는 폰 위치 + 사용자가 만든 정류장 zone
+    조합으로 "내가 정류장에 있을 때만 API 호출" 자동화 구현. 정류장 zone 만들기:
+    설정 → 영역(Zone) → 추가 → 정류장 좌표 입력 (반경 100~200m 권장).
+
+    서울버스 / 한국 버스 양쪽 모두 동작 (활성화 스위치는 두 흐름 공통).
+  domain: automation
+  source_url: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/stop_proximity_toggle.yaml
+  input:
+    person_or_tracker:
+      name: 추적할 디바이스 (person 또는 device_tracker)
+      description: 본인 폰의 person.* 또는 device_tracker.* entity
+      selector:
+        entity:
+          domain:
+            - person
+            - device_tracker
+    stop_zone:
+      name: 정류장 zone
+      description: >
+        설정 → 영역에서 미리 만들어 둔 정류장 zone (예: zone.bus_stop_home).
+        반경 100~200m 권장.
+      selector:
+        entity:
+          domain: zone
+    activation_switch:
+      name: 활성화할 스위치
+      description: >
+        예) switch.seoul_bus_23288_update_active 또는
+        switch.korea_bus_03171_update_active
+      selector:
+        entity:
+          domain: switch
+    off_delay_minutes:
+      name: zone 을 떠난 후 OFF 까지 N분
+      description: 0 = 즉시 끄기. 짧게 다녀오는 케이스용 buffer.
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 30
+          unit_of_measurement: 분
+          mode: slider
+
+variables:
+  person_or_tracker: !input person_or_tracker
+  stop_zone: !input stop_zone
+  activation_switch: !input activation_switch
+  off_delay_minutes: !input off_delay_minutes
+
+trigger:
+  - platform: state
+    entity_id: !input person_or_tracker
+  - platform: state
+    entity_id: !input stop_zone
+
+action:
+  - variables:
+      zone_name: "{{ stop_zone.split('.')[1] }}"
+      in_zone: "{{ states(person_or_tracker) == zone_name }}"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ in_zone and is_state(activation_switch, 'off') }}"
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input activation_switch
+      - conditions:
+          - condition: template
+            value_template: "{{ not in_zone and is_state(activation_switch, 'on') }}"
+        sequence:
+          - delay:
+              minutes: !input off_delay_minutes
+          # Re-check after the delay — user might have returned
+          - condition: template
+            value_template: "{{ states(person_or_tracker) != zone_name }}"
+          - service: switch.turn_off
+            target:
+              entity_id: !input activation_switch
+
+mode: restart
+max_exceeded: silent

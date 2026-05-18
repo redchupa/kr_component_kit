@@ -429,6 +429,37 @@ X 닫기 시 변경 사항 무효 (transactional 패턴).
 
 ---
 
+### 📱 위치 기반 블루프린트 4종 — HA Companion App 핸드폰 추적 활용
+
+HA Companion App 으로 추적되는 본인 폰의 **device_tracker** 위치를 활용한 자동화. 일반 버스앱이 못 하는 HA + 폰 위치의 강점.
+
+| 블루프린트 | 동작 |
+|---|---|
+| 🚏 **정류장 근처 자동 활성화** | 폰이 정류장 zone 진입 → 활성화 스위치 ON, 떠나면 N분 후 OFF |
+| 🏠 **집 떠날 때 버스 시간 알림** | `zone.home` 떠나는 순간 다음 버스 도착 시간 푸시 |
+| 📍 **목적지 도착 시 하차 알람** | 폰이 목적지 zone 진입 → 푸시 ("내릴 정거장 도착") — **버스에서 잠들어도 위치로 깨움** |
+| 🌍 **출퇴근 자동 모드** | 시간 + 위치 → 활성화 스위치 자동 ON/OFF (원본 개발자 자동화 패턴) |
+
+**선행 단계 — 정류장 / 회사 zone 만들기**:
+1. HA → 설정 → **영역(Zone)** → 추가
+2. 정류장 좌표 입력 ([카카오맵](https://map.kakao.com) → 정류장 클릭 → 위경도 확인)
+3. 반경: 정류장 zone은 **100~200m**, 회사/학교 zone은 **200~300m** 권장
+
+**Import URL**:
+```
+정류장 근처 자동 활성화: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/stop_proximity_toggle.yaml
+집 떠날 때 버스 알림:    https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/leaving_home_alert.yaml
+목적지 도착 하차 알람:  https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/arrival_alight_alert.yaml
+출퇴근 자동 모드:        https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/commute_auto_mode.yaml
+```
+
+위치 기반 자동화 조합 예시:
+- **"정류장 근처 자동 활성화" + "집 떠날 때 알림"** = 외출 시 알아서 폴링 + 다음 버스 안내
+- **"목적지 도착 하차 알람"** = 버스에서 잠들어도 안전
+- **"출퇴근 자동 모드"** = 평일 출퇴근만 정확히 폴링, 주말/외출 시 자동 OFF (API 호출 한도 절감)
+
+---
+
 ## ⚙️ 등록·재설정 흐름
 
 ### 새 항목 등록

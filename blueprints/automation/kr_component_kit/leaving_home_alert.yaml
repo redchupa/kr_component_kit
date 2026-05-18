@@ -1,0 +1,69 @@
+blueprint:
+  name: 🏠 집 떠날 때 버스 시간 알림
+  description: >
+    핸드폰(device_tracker)이 **zone.home 을 떠나는 순간** 다음 버스 도착 시간을
+    푸시 알림으로 보냅니다.
+
+    원리: 외출 시 손에 폰을 들고 나가는 그 시점에 "다음 버스 N분 후" 가 자동
+    안내. 사용자가 폰 꺼내서 버스앱 열 필요 없음.
+  domain: automation
+  source_url: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/leaving_home_alert.yaml
+  input:
+    person_or_tracker:
+      name: 추적할 디바이스
+      description: 본인 폰의 person 또는 device_tracker entity
+      selector:
+        entity:
+          domain:
+            - person
+            - device_tracker
+    home_zone:
+      name: 집 zone
+      description: 일반적으로 zone.home
+      default: zone.home
+      selector:
+        entity:
+          domain: zone
+    bus_sensor:
+      name: 버스 도착 sensor (slot 0)
+      description: >
+        예) sensor.seoul_bus_23288_2230_now
+      selector:
+        entity:
+          domain: sensor
+          device_class: timestamp
+    notify_service:
+      name: 알림 서비스 이름 (도메인 제외, 예 mobile_app_my_phone)
+      selector:
+        text:
+
+variables:
+  bus_sensor: !input bus_sensor
+  notify_service: !input notify_service
+  home_zone_name: "{{ states('zone.home') }}"
+
+trigger:
+  - platform: state
+    entity_id: !input person_or_tracker
+    from: home
+
+action:
+  - service: "notify.{{ notify_service }}"
+    data:
+      title: "🚌 다음 버스"
+      message: >
+        {{ state_attr(bus_sensor, 'friendly_name') or bus_sensor }} —
+        {% set v = states(bus_sensor) %}
+        {% if v in ['unknown', 'unavailable', 'none', None] %}
+          (도착정보 없음)
+          {% set msg = state_attr(bus_sensor, 'message') %}
+          {% if msg %} {{ msg }}{% endif %}
+        {% else %}
+          {% set delta = ((as_datetime(v) - now()).total_seconds() / 60) | round(0) %}
+          약 {{ delta }}분 후 도착.
+          {% set msg = state_attr(bus_sensor, 'message') %}
+          {% if msg %} ({{ msg }}){% endif %}
+        {% endif %}
+
+mode: single
+max_exceeded: silent

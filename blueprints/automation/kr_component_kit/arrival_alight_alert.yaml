@@ -1,0 +1,62 @@
+blueprint:
+  name: 📍 목적지 도착 시 하차 알람 (위치 기반)
+  description: >
+    핸드폰(device_tracker)이 **목적지 zone 에 진입하는 순간** 푸시 알림.
+
+    원리: 버스 안에서 잠들었거나 영상 보더라도 본인 위치 기반으로 깨움.
+    버스앱이 못 하는 HA + 폰 위치 추적의 강점.
+
+    > 💡 목적지 zone 만들기: 설정 → 영역 → 추가 → 회사/학교/약속장소 좌표
+    > + 반경 200~300m (도시 정류장 간격 고려).
+
+    버스 sensor 가 정확하지 않은 경우 (만차로 통과 / 우회) 도 위치만 맞으면
+    알람이 작동하므로 더 안정적입니다.
+  domain: automation
+  source_url: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/arrival_alight_alert.yaml
+  input:
+    person_or_tracker:
+      name: 추적할 디바이스
+      description: 본인 폰의 person 또는 device_tracker entity
+      selector:
+        entity:
+          domain:
+            - person
+            - device_tracker
+    destination_zone:
+      name: 목적지 zone
+      description: 회사/학교/약속장소 zone (반경 200~300m 권장)
+      selector:
+        entity:
+          domain: zone
+    notify_service:
+      name: 알림 서비스 이름 (도메인 제외, 예 mobile_app_my_phone)
+      selector:
+        text:
+    extra_message:
+      name: 추가 메시지 (옵션)
+      description: 알림 본문 끝에 붙일 자유 메시지. 빈 칸 OK.
+      default: ""
+      selector:
+        text:
+
+variables:
+  destination_zone: !input destination_zone
+  notify_service: !input notify_service
+  extra_message: !input extra_message
+
+trigger:
+  - platform: state
+    entity_id: !input person_or_tracker
+    to: "{{ destination_zone.split('.')[1] }}"
+
+action:
+  - service: "notify.{{ notify_service }}"
+    data:
+      title: "📍 목적지 도착"
+      message: >
+        🚏 {{ state_attr(destination_zone, 'friendly_name') or destination_zone.split('.')[1] }}
+        근처에 도착했습니다. 하차 준비하세요!
+        {% if extra_message %} {{ extra_message }}{% endif %}
+
+mode: single
+max_exceeded: silent

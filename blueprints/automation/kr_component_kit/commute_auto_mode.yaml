@@ -1,0 +1,134 @@
+blueprint:
+  name: 🌍 출퇴근 자동 모드 (시간 + 위치 → 스위치 ON/OFF)
+  description: >
+    출근 시간대 + 집 zone 안 → 활성화 스위치 ON.
+    회사 zone 진입 → 자동 OFF.
+    퇴근 시간대 + 회사 zone 안 → 활성화 스위치 ON.
+    집 zone 진입 → 자동 OFF.
+
+    원본 Murianwind/seoul_bus 개발자가 공유한 출퇴근 자동화 패턴을
+    블루프린트로 단순화한 버전. 평일/주말 구분은 사용자 selector 로.
+  domain: automation
+  source_url: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/commute_auto_mode.yaml
+  input:
+    person_or_tracker:
+      name: 추적할 디바이스
+      selector:
+        entity:
+          domain:
+            - person
+            - device_tracker
+    home_zone:
+      name: 집 zone
+      default: zone.home
+      selector:
+        entity:
+          domain: zone
+    work_zone:
+      name: 회사/학교 zone
+      selector:
+        entity:
+          domain: zone
+    activation_switch:
+      name: 활성화 스위치
+      description: 출퇴근 정류장의 update_active 스위치
+      selector:
+        entity:
+          domain: switch
+    morning_time:
+      name: 출근 시간 (스위치 ON 시작)
+      default: "06:30:00"
+      selector:
+        time:
+    evening_time:
+      name: 퇴근 시간 (스위치 ON 시작)
+      default: "17:30:00"
+      selector:
+        time:
+    workdays_only:
+      name: 평일에만 동작
+      description: ON 으로 두면 토/일은 자동화 무시. binary_sensor.workday_sensor 필요 (workday integration).
+      default: false
+      selector:
+        boolean:
+
+variables:
+  person_or_tracker: !input person_or_tracker
+  home_zone: !input home_zone
+  work_zone: !input work_zone
+  activation_switch: !input activation_switch
+  workdays_only: !input workdays_only
+  home_zone_name: "{{ home_zone.split('.')[1] }}"
+  work_zone_name: "{{ work_zone.split('.')[1] }}"
+
+trigger:
+  # Morning: time fires while at home → ON
+  - platform: time
+    at: !input morning_time
+    id: morning_time
+  # Evening: time fires while at work → ON
+  - platform: time
+    at: !input evening_time
+    id: evening_time
+  # Reaching work in the morning → OFF
+  - platform: state
+    entity_id: !input person_or_tracker
+    to: "{{ work_zone.split('.')[1] }}"
+    id: at_work
+  # Reaching home in the evening → OFF
+  - platform: state
+    entity_id: !input person_or_tracker
+    to: "{{ home_zone.split('.')[1] }}"
+    id: at_home
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: morning_time
+          - condition: template
+            value_template: "{{ states(person_or_tracker) == home_zone_name }}"
+          - condition: template
+            value_template: >-
+              {{ not workdays_only
+                 or is_state('binary_sensor.workday_sensor', 'on') }}
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input activation_switch
+      - conditions:
+          - condition: trigger
+            id: evening_time
+          - condition: template
+            value_template: "{{ states(person_or_tracker) == work_zone_name }}"
+          - condition: template
+            value_template: >-
+              {{ not workdays_only
+                 or is_state('binary_sensor.workday_sensor', 'on') }}
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input activation_switch
+      - conditions:
+          - condition: trigger
+            id: at_work
+          - condition: state
+            entity_id: !input activation_switch
+            state: "on"
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input activation_switch
+      - conditions:
+          - condition: trigger
+            id: at_home
+          - condition: state
+            entity_id: !input activation_switch
+            state: "on"
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input activation_switch
+
+mode: restart
+max_exceeded: silent
