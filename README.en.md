@@ -236,6 +236,8 @@ All three live under `data.go.kr`, operating agency **Korea Meteorological Admin
 
 ### 🚌 Transit — keys depend on scenario
 
+> ✅ **Live-verified** (2026-05-18): Korea Bus tested end-to-end on a real HA instance with two stops registered simultaneously — Seoul Sindorim.Guro Station (ARS 17003) and Gyeonggi Siheung Eungye-Umirin (ARS 25842).  Per-route arrival sensors + refresh button + activation switch all working; every documented attribute (vehicle_number, current_stop, message, direction, bus_type, first_time / last_time / intervals, next_stop, status) confirmed against live KakaoMap responses.
+
 | Use case | Key needed | Where |
 |---|---|---|
 | Subway arrivals | Seoul Open Data Plaza key | [👉 data.seoul.go.kr](https://data.seoul.go.kr) → apply for `지하철 실시간 도착정보` |
@@ -693,6 +695,34 @@ Some services use non-official paths (HTML scraping, mobile-app APIs). External-
 - A few government-site clients use `verify=False` (TLS-verification bypass) to work around the sites' TLS configuration quirks — review the source if this concerns you
 - All credentials (IDs, passwords, tokens, API keys) are stored only in Home Assistant's local storage. Nothing is sent externally
 - This is an **unofficial third-party integration** — not affiliated with the Korean government or any of the listed agencies. Use at your own risk.
+
+---
+
+## 🙏 Credits & Acknowledgments
+
+The two bus modules in this integration are built on top of work by these open-source projects.  Deep thanks to the original authors.
+
+| Module | Author | Source |
+|---|---|---|
+| 🚍 Korea Bus (`korea_bus/`) | **luiseok** | <https://github.com/luiseok/ha-korea-bus-arrival> |
+| 🚌 Seoul Bus (`seoul_bus/`) — origin | **miumida** | <https://github.com/miumida/seoul_bus> |
+| 🚌 Seoul Bus (`seoul_bus/`) — patterns | **Murianwind** | <https://github.com/Murianwind/seoul_bus> |
+
+### What this integration adds on top
+
+The base flows came from the works above.  As we absorbed them into the `kr_component_kit` integration pattern, we layered the following on:
+
+- **Single integration for both flows** — KakaoMap (Korea Bus) + Seoul official API (Seoul Bus) under one menu
+- **Migration safety net** — `async_migrate_entry` handles the `kakao_bus` → `korea_bus` domain rename and the `_api_active` → `_update_active` suffix swap so existing users' automations don't break
+- **TIMESTAMP-based sensors** — HA renders "N min from now" automatically, native to Weather/Calendar UX
+- **Stale-data preservation** — last successful response stays on the entity during transient API errors
+- **Activation switch** (continuing the Murianwind pattern) + **refresh button**
+- **Low-floor / Full-bus binary_sensors** (uses Seoul `busType` / `isFullFlag` / `congestion` fields the original wrapper didn't expose)
+- **Multi-stop entries + options menu** for add / remove / edit routes without re-registering
+- **8 automation blueprints** (departure / alight / lastride / crowded / proximity-toggle / leaving-home / arrival-alight / commute-auto-mode)
+- **i18n in 4 languages** (strings + en + ko + ja)
+
+Without the upstream work, this integration wouldn't exist. 🙏
 
 ---
 
