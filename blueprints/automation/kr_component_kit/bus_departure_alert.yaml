@@ -1,18 +1,16 @@
 blueprint:
   name: 🚌 출발 알람 (버스 도착 N분 전)
   description: >
-    선택한 버스 도착 sensor 가 **지정한 N분 이내** 로 진입하면 푸시 알림을 보냅니다.
+    선택한 버스 도착 sensor 가 **지정한 N분 이내** 로 진입하면 알림 액션을 실행합니다.
 
     "정류장까지 도보 N분 → 지금 출발하세요" 자동화에 사용하세요.
-    서울버스 / 한국 버스 어느 쪽 sensor 든 동일하게 동작합니다.
+    서울버스 / 한국 버스 양쪽 모두 동작.
   domain: automation
   source_url: https://github.com/redchupa/kr_component_kit/blob/main/blueprints/automation/kr_component_kit/bus_departure_alert.yaml
   input:
     bus_sensor:
       name: 버스 도착 sensor
-      description: >
-        도착 시간(TIMESTAMP) sensor 를 선택하세요.
-        예) sensor.seoul_bus_23288_2230_now / sensor.korea_bus_03171_350_now
+      description: 도착 시간(TIMESTAMP) sensor 를 선택하세요.
       selector:
         entity:
           domain: sensor
@@ -27,18 +25,22 @@ blueprint:
           max: 30
           unit_of_measurement: 분
           mode: slider
-    notify_service:
-      name: 알림 서비스 이름 (도메인 제외)
+    notify_action:
+      name: 알림 액션
       description: >
-        모바일 앱 notify 서비스 이름. 예) mobile_app_my_phone
-        (Settings → Devices → Companion App 등록 시 표시되는 이름. `notify.` 접두사 제외)
+        실행할 알림 액션을 선택하세요 (보통 `notify.mobile_app_<폰_이름>`).
+        action 안에서 변수 `{{ alert_title }}` 와 `{{ alert_message }}` 를 사용할 수 있습니다.
+      default:
+        - service: notify.notify
+          data:
+            title: "{{ alert_title }}"
+            message: "{{ alert_message }}"
       selector:
-        text:
+        action:
 
 variables:
   bus_sensor: !input bus_sensor
   leave_minutes: !input leave_minutes
-  notify_service: !input notify_service
 
 trigger:
   - platform: time_pattern
@@ -56,16 +58,17 @@ condition:
       {% endif %}
 
 action:
-  - service: "notify.{{ notify_service }}"
-    data:
-      title: "🚌 버스 출발 시간"
-      message: >
-        {{ state_attr(bus_sensor, 'friendly_name') or bus_sensor }} —
+  - variables:
+      alert_title: "🚌 버스 출발 시간"
+      alert_message: >-
         {% set v = states(bus_sensor) %}
         {% set delta = ((as_datetime(v) - now()).total_seconds() / 60) | round(0) %}
+        {{ state_attr(bus_sensor, 'friendly_name') or bus_sensor }} —
         약 {{ delta }}분 후 도착. 지금 출발하세요!
-        {% set msg = state_attr(bus_sensor, 'message') %}
-        {% if msg %} ({{ msg }}){% endif %}
+        {%- set msg = state_attr(bus_sensor, 'message') -%}
+        {%- if msg %} ({{ msg }}){% endif -%}
+  - choose: []
+    default: !input notify_action
 
 mode: single
 max_exceeded: silent

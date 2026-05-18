@@ -387,9 +387,31 @@ Closing with the X discards pending edits (transactional pattern).
 
 ---
 
-### 🎁 4 ready-made automation blueprints
+### 🎁 8 ready-made automation blueprints
 
-Top 4 use cases from Korea's public-data app catalog (get-off alert / departure alert / last-bus alert / full-bus alert) are shipped as **HA blueprints**.  Import once via URL → pick your sensor and notify target in the UI → automation done, no YAML needed.
+#### Seoul Bus ↔ Korea Bus compatibility
+
+| Blueprint | 🚌 Seoul Bus | 🚍 Korea Bus |
+|---|:---:|:---:|
+| Departure alert | ✅ | ✅ |
+| Get-off alert | ✅ | ✅ |
+| Last-bus alert | ✅ | ✅ |
+| Full / crowded alert | ✅ | ❌ (KakaoMap response lacks full-bus field) |
+| Proximity polling toggle (location-aware) | ✅ | ✅ |
+| Leaving-home alert (location-aware) | ✅ | ✅ |
+| Destination-arrival get-off alert (location-aware) | ✅ | ✅ |
+| Commute auto mode (location-aware) | ✅ | ✅ |
+
+→ **7 of 8 work on either flow**. Korea Bus users get the full automation toolbox bar one Seoul-only feature.
+
+#### Notify input — action selector
+
+Every blueprint's notify input is an **HA action selector**.  On import:
+- pick your notify service (e.g. `notify.mobile_app_my_phone`) from the UI dropdown
+- the default `title` / `message` use `{{ alert_title }}` / `{{ alert_message }}` — internal variables fill these for you
+- feel free to swap in `notify.telegram`, `media_player.tts.google_say`, or any other action you prefer
+
+Patterns from Korea's public-data bus-app catalog, shipped as HA blueprints.
 
 | Blueprint | Trigger | Use case |
 |---|---|---|
