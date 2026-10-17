@@ -96,10 +96,49 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
+# curl_cffi / bs4 는 import 시 패키지 메타데이터 디스크 I/O(listdir/read_text)가
+# 발생한다. 이벤트 루프에서 하면 HA 가 blocking-call 경고를 낸다(함수 안 지연
+# import 라도 그 코루틴이 루프에서 돌면 마찬가지). 아래 타입은 setup 초반에
+# executor 로 한 번 미리 import 해 sys.modules 에 올려두면, 이후 모든 import 는
+# 디스크 I/O 없는 no-op 이 되어 경고가 사라진다.
+_HEAVY_IMPORT_TYPES = {
+    ENTRY_DISASTER,
+    ENTRY_SAFETY_ALERT,
+    ENTRY_KEPCO,
+    ENTRY_ARISU,
+    ENTRY_KOREA_BUS,
+}
+
+
+async def _async_preimport_heavy(hass: HomeAssistant) -> None:
+    """curl_cffi·bs4 를 executor 에서 미리 import(루프 블로킹 방지, 베스트에포트).
+
+    깨진/부분 설치 상태여도 setup 을 막지 않도록 예외는 삼킨다 — 실제 사용처의
+    지연 import 가 그때 다시 시도하고, 실패 시 재시도 가능한 UpdateFailed 로 처리된다.
+    """
+    import importlib
+
+    def _imp() -> None:
+        for mod in ("curl_cffi", "bs4"):
+            try:
+                importlib.import_module(mod)
+            except Exception:  # noqa: BLE001
+                pass
+
+    try:
+        await hass.async_add_import_executor_job(_imp)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     etype = entry.data.get(CONF_ENTRY_TYPE) or entry.data.get("service")
     store: dict = {}
+
+    # 무거운 서드파티 import 를 이벤트 루프 밖(executor)에서 선행 → 블로킹 경고 방지.
+    if etype in _HEAVY_IMPORT_TYPES:
+        await _async_preimport_heavy(hass)
 
     if etype == ENTRY_WEATHER:
         from .weather.coordinator import WeatherWarningCoordinator
