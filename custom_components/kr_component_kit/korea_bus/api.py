@@ -16,7 +16,6 @@ import re
 import urllib.parse
 from typing import Any
 import aiohttp
-from bs4 import BeautifulSoup
 from . import KAKAO_ARRIVALS_URL, KAKAO_HEADERS, KAKAO_SEARCH_URL, KAKAO_STATION_URL
 
 _LOGGER = logging.getLogger(__name__)
@@ -57,6 +56,9 @@ async def search_stops(
                 body = await r.text()
     except (asyncio.TimeoutError, aiohttp.ClientError) as e:
         raise KoreaBusApiError(f"KakaoMap search transport error: {e}") from e
+
+    # Lazy import: avoid blocking disk I/O at module import on the event loop.
+    from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(body, "html.parser")
     results: dict[str, dict[str, Any]] = {}
@@ -121,6 +123,9 @@ async def fetch_stop_routes(
     except (asyncio.TimeoutError, aiohttp.ClientError) as e:
         raise KoreaBusApiError(
             f"KakaoMap stationInfo transport error for stop={stop_id}: {e}") from e
+
+    # Lazy import: avoid blocking disk I/O at module import on the event loop.
+    from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(body, "html.parser")
     routes: list[dict[str, str]] = []

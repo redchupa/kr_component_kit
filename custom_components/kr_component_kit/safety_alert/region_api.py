@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-import curl_cffi
-
 from ..const import LOGGER
 
 _TIMEOUT = 15
@@ -54,6 +52,8 @@ class SafetyAlertRegionApiClient:
     async def async_get_sgg_list(self, sido_code: str) -> Optional[List[Dict[str, str]]]:
         """Get list of sgg (시군구) regions for a given sido via POST JSON."""
         url = f"{_BASE_URL}/changeSidoList.do"
+        # Lazy import: avoid blocking disk I/O at module import on the event loop.
+        import curl_cffi
         try:
             async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
                 response = await session.post(
@@ -86,6 +86,8 @@ class SafetyAlertRegionApiClient:
     async def async_get_emd_list(self, sido_code: str, sgg_code: str) -> Optional[List[Dict[str, str]]]:
         """Get list of emd (읍면동) regions for a given sido and sgg via POST JSON."""
         url = f"{_BASE_URL}/changeSggList.do"
+        # Lazy import: avoid blocking disk I/O at module import on the event loop.
+        import curl_cffi
         try:
             async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
                 response = await session.post(

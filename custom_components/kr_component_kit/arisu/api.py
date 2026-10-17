@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 
 import aiohttp
-from bs4 import BeautifulSoup
 
 from .exceptions import ArisuConnectionError, ArisuDataError
 import logging
@@ -203,6 +202,10 @@ class ArisuApiClient:
     def _parse_html_response(self, html_content: str) -> Dict[str, Any]:
         """Parse HTML response to extract water bill information based on HAR analysis."""
         try:
+            # Lazy import: bs4 has been flaky in this env; also avoids blocking
+            # disk I/O at module import on the event loop.
+            from bs4 import BeautifulSoup
+
             soup = BeautifulSoup(html_content, "html.parser")
 
             # HAR 파일에서 확인된 구조: totAmt input 찾기

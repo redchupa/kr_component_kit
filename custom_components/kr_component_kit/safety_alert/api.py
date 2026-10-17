@@ -15,8 +15,6 @@ import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
-from bs4 import BeautifulSoup
-
 from .exceptions import SafetyAlertConnectionError
 from ..const import LOGGER, TZ_ASIA_SEOUL
 
@@ -93,6 +91,14 @@ class SafetyAlertApiClient:
         ``module 'bs4' has no attribute 'Tag'`` when the installed
         beautifulsoup4 does not expose ``Tag`` at the module level.
         """
+        # Lazy import: bs4 has been flaky in this environment (see git history:
+        # "module 'bs4' has no attribute 'Tag'", and a startup 'No module named
+        # bs4.exceptions'). Importing it at module top also runs blocking disk
+        # I/O during async_setup_entry. Deferring the import here keeps the entry
+        # resilient — a bs4 load failure becomes a retryable UpdateFailed instead
+        # of crashing the whole config entry at setup.
+        from bs4 import BeautifulSoup
+
         soup = BeautifulSoup(html, "html.parser")
         alerts: List[Dict[str, Any]] = []
 

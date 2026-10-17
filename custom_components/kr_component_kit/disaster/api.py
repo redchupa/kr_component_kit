@@ -16,8 +16,6 @@ import logging
 import xml.etree.ElementTree as ET
 from typing import Any
 
-from curl_cffi import requests as cffi_requests
-
 _LOGGER = logging.getLogger(__name__)
 DISASTER_URL = "https://www.safetydata.go.kr/V2/api/DSSP-IF-00247"
 _TIMEOUT = 20
@@ -98,6 +96,12 @@ def _parse_payload(text: str) -> list[dict[str, Any]]:
 
 
 async def _fetch_with_profile(profile: str, params: dict[str, str]) -> str:
+    # Lazy import: importing curl_cffi at module top runs blocking disk I/O
+    # (listdir/read_text on package metadata) which HA flags inside the event
+    # loop during async_setup_entry. Deferring to first use keeps setup
+    # loop-safe (matches the safety_alert/kepco pattern).
+    from curl_cffi import requests as cffi_requests
+
     async with cffi_requests.AsyncSession(impersonate=profile) as s:
         r = await s.get(
             DISASTER_URL,
