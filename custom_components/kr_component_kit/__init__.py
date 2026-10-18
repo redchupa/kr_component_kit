@@ -193,7 +193,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         api_key = entry.data["api_key"]
         region = entry.data.get("region_filter", "")
         c = DisasterCoordinator(hass, api_key, region)
-        await c.async_config_entry_first_refresh()
+        # First refresh deferred to a background task after platform setup
+        # (see end of async_setup_entry) so a slow/unreachable disaster API
+        # does not block Home Assistant startup. Sensors guard data is None.
         store = {"coordinator": c, "region": region}
 
     elif etype == ENTRY_SAFETY_ALERT:
@@ -227,7 +229,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 region.get("code2"),
                 region.get("code3"),
             )
-            await c.async_config_entry_first_refresh()
+            # First refresh deferred (background, after platform setup) so a
+            # slow/timing-out safety-alert endpoint doesn't block HA startup.
             coordinators[region["code"]] = c
         store = {"coordinators": coordinators, "regions": regions}
 
@@ -347,6 +350,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN][entry.entry_id] = store
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORM_MAP.get(etype, []))
+
+    # Non-blocking first fetch for slow/flaky informational services. Their
+    # sensors already guard coordinator.data is None, so they render
+    # empty/unknown until the background refresh lands, then update in place.
+    # Measured: the safety-alert and disaster entries each held setup ~31s
+    # (the safety-alert endpoint alone can take 20s+ to time out), delaying
+    # Home Assistant startup. Deferring keeps HA start fast.
+    if etype == ENTRY_DISASTER:
+        entry.async_create_background_task(
+            hass, store["coordinator"].async_refresh(),
+            f"{DOMAIN}_disaster_first_refresh",
+        )
+    elif etype == ENTRY_SAFETY_ALERT:
+        for _code, _c in store.get("coordinators", {}).items():
+            entry.async_create_background_task(
+                hass, _c.async_refresh(),
+                f"{DOMAIN}_safety_alert_{_code}_first_refresh",
+            )
+
     store["unregister_llm"] = await async_setup_llm_api(hass, entry, etype)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
