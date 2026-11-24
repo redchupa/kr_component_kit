@@ -60,7 +60,7 @@ class SafetyAlertRegionApiClient:
                     url,
                     json={"sbLawArea1": sido_code},
                     headers=_HEADERS,
-                    verify=False,
+                    verify=True,
                     timeout=_TIMEOUT,
                 )
                 if response.status_code != 200:
@@ -94,7 +94,7 @@ class SafetyAlertRegionApiClient:
                     url,
                     json={"sbLawArea1": sido_code, "sbLawArea2": sgg_code},
                     headers=_HEADERS,
-                    verify=False,
+                    verify=True,
                     timeout=_TIMEOUT,
                 )
                 if response.status_code != 200:

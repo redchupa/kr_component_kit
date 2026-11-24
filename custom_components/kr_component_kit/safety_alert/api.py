@@ -66,7 +66,7 @@ class SafetyAlertApiClient:
                     _BASE_URL,
                     params=params,
                     headers=_HEADERS,
-                    verify=False,
+                    verify=True,
                     timeout=15,
                 )
 
