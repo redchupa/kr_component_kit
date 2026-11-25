@@ -3,6 +3,7 @@
 # 호출한다.  공식 활용가이드 기준 "상세기능명"은 `getStationByUidItem` 인데
 # 실제 Call Back URL 의 경로는 `getStationByUid` 라 두 이름이 다르다.
 # 헷갈리기 쉬워서 명시.
+# ws.bus.go.kr 는 HTTPS(443)를 지원하지 않아 HTTP 엔드포인트만 응답한다.
 SEOUL_BUS_STATION_URL = (
     "http://ws.bus.go.kr/api/rest/stationinfo/getStationByUid"
     "?ServiceKey={key}&arsId={ars_id}"

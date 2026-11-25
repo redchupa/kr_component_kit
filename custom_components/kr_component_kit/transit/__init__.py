@@ -1,4 +1,5 @@
 """Transit sub-module constants."""
+# swopenAPI.seoul.go.kr 및 ws.bus.go.kr 는 HTTPS(443)를 지원하지 않아 HTTP만 응답한다.
 SUBWAY_BULK_URL = "http://swopenAPI.seoul.go.kr/api/subway/{key}/json/realtimeStationArrival/0/500/{station}"
 SUBWAY_SCAN_INTERVAL = 120
 

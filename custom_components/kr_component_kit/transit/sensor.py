@@ -68,11 +68,15 @@ class BusArrivalSensor(CoordinatorEntity, SensorEntity):
         if not line or line.get("realtimeState") == "NOVEHICLE":
             return None
         arrival = line.get("arrival", {})
+        arrival_at = arrival.get(f"_arrival_at_{self._idx + 1}")
+        if isinstance(arrival_at, datetime):
+            return arrival_at
         key = "arrivalTime" if self._idx == 0 else "arrivalTime2"
         t = arrival.get(key, 0)
         if not t or t <= 0:
             return None
-        return datetime.now(KST) + timedelta(seconds=t)
+        base = getattr(self.coordinator, "last_fetched_at", None) or datetime.now(KST)
+        return base + timedelta(seconds=t)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

@@ -1,7 +1,7 @@
 """Seoul Bus arrival coordinator — one per station."""
 from __future__ import annotations
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -10,6 +10,14 @@ from . import SEOUL_BUS_SCAN_INTERVAL
 from .api import SeoulBusApiError, build_route_dict, fetch_station
 
 _LOGGER = logging.getLogger(__name__)
+KST = timezone(timedelta(hours=9))
+
+
+def _parse_int(val: Any) -> int:
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return 0
 
 
 class SeoulBusCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
@@ -40,10 +48,11 @@ class SeoulBusCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         self.station_name = station_name
         self._include_routes = list(include_routes or [])
         self._session = async_get_clientsession(hass)
-        # Gate flag — flipped by SeoulBusActiveSwitch.  Starts True so the
-        # initial first_refresh has data to populate the entities; the
-        # switch's RestoreEntity then resets it to the user's last choice.
-        self.api_enabled: bool = True
+        # Gate flag — flipped by SeoulBusActiveSwitch after RestoreEntity
+        # restores the user's last choice.  Starts False so disabled stations
+        # never fire an unwanted request during Home Assistant startup.
+        self.api_enabled: bool = False
+        self.last_fetched_at: datetime | None = None
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
         if not self.api_enabled:
@@ -60,4 +69,14 @@ class SeoulBusCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
                     self.ars_id, err)
                 return self.data
             raise UpdateFailed(str(err)) from err
-        return build_route_dict(items, self._include_routes)
+        fetched_at = datetime.now(KST)
+        self.last_fetched_at = fetched_at
+        result = build_route_dict(items, self._include_routes)
+        for item in result.values():
+            for slot in (1, 2):
+                secs = _parse_int(item.get(f"traTime{slot}"))
+                if secs > 0:
+                    item[f"_arrival_at_{slot}"] = fetched_at + timedelta(seconds=secs)
+                else:
+                    item.pop(f"_arrival_at_{slot}", None)
+        return result

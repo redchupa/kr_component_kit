@@ -86,10 +86,14 @@ class KoreaBusArrivalSensor(CoordinatorEntity, SensorEntity):
         bus = self._bus()
         if not bus:
             return None
+        arrival_at = bus.get(f"_arrival_at_{self._idx + 1}")
+        if isinstance(arrival_at, datetime):
+            return arrival_at
         seconds = _parse_int(bus.get(self._k["time"]))
         if seconds <= 0:
             return None
-        return datetime.now(KST) + timedelta(seconds=seconds)
+        base = getattr(self.coordinator, "last_fetched_at", None) or datetime.now(KST)
+        return base + timedelta(seconds=seconds)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

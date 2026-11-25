@@ -329,11 +329,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 station_name=st.get("station_name") or st["ars_id"],
                 include_routes=st.get("routes") or [],
             )
-            # First refresh runs with api_enabled=True (default) so the
-            # entities have data to show right after install.  We then
-            # flip it OFF; SeoulBusActiveSwitch.async_added_to_hass will
-            # restore the user's last choice via RestoreEntity.
-            await c.async_config_entry_first_refresh()
+            # Wait for SeoulBusActiveSwitch.async_added_to_hass to restore the
+            # user's ON/OFF preference before polling.  Disabled stations stay
+            # quiet on restart, and enabled stations refresh in the background
+            # without blocking other stations in the same config entry.
             c.api_enabled = False
             coords[st["ars_id"]] = c
         store = {"coordinators": coords, "stations": stations}
@@ -354,8 +353,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 include_routes=stop.get("routes") or [],
                 scan_interval=scan,
             )
-            # Same first-refresh-then-OFF pattern as seoul_bus.
-            await c.async_config_entry_first_refresh()
+            # Wait for KoreaBusActiveSwitch.async_added_to_hass to restore the
+            # user's ON/OFF preference before polling (same as seoul_bus).
             c.api_enabled = False
             kbus_coords[stop["stop_id"]] = c
         store = {"coordinators": kbus_coords, "stops": stops}

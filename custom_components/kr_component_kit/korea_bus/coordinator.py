@@ -1,7 +1,7 @@
 """Korea Bus arrival coordinator — one per stop."""
 from __future__ import annotations
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -10,6 +10,14 @@ from . import KOREA_BUS_SCAN_INTERVAL
 from .api import KoreaBusApiError, fetch_arrivals
 
 _LOGGER = logging.getLogger(__name__)
+KST = timezone(timedelta(hours=9))
+
+
+def _parse_int(val: Any) -> int:
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return 0
 
 
 class KoreaBusCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
@@ -39,7 +47,8 @@ class KoreaBusCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
         self._include_routes = set(include_routes or [])
         self._session = async_get_clientsession(hass)
         # See SeoulBusCoordinator.api_enabled — same contract.
-        self.api_enabled: bool = True
+        self.api_enabled: bool = False
+        self.last_fetched_at: datetime | None = None
 
     async def _async_update_data(self) -> dict[str, dict[str, Any]]:
         if not self.api_enabled:
@@ -57,6 +66,17 @@ class KoreaBusCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
                 return self.data
             raise UpdateFailed(str(err)) from err
 
+        fetched_at = datetime.now(KST)
+        self.last_fetched_at = fetched_at
         if self._include_routes:
-            return {k: v for k, v in arrivals.items() if k in self._include_routes}
-        return arrivals
+            result = {k: v for k, v in arrivals.items() if k in self._include_routes}
+        else:
+            result = arrivals
+        for bus in result.values():
+            for slot, time_key in ((1, "arrivalTime"), (2, "arrivalTime2")):
+                secs = _parse_int(bus.get(time_key))
+                if secs > 0:
+                    bus[f"_arrival_at_{slot}"] = fetched_at + timedelta(seconds=secs)
+                else:
+                    bus.pop(f"_arrival_at_{slot}", None)
+        return result

@@ -7,7 +7,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from . import DISASTER_SCAN_INTERVAL
-from .api import fetch_disaster_messages
+from .api import DisasterApiError, fetch_disaster_messages
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,6 +24,9 @@ class DisasterCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         try:
             all_msgs = await fetch_disaster_messages(self._api_key, count=30)
             self._consecutive_failures = 0
+        except DisasterApiError as err:
+            self._consecutive_failures += 1
+            raise UpdateFailed(str(err)) from err
         except Exception as err:
             self._consecutive_failures += 1
             # Tolerate transient TLS/connection errors. If we have stale data,

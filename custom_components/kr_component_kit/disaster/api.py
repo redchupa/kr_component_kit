@@ -15,6 +15,13 @@ _BROWSER_HEADERS = {
     "Connection": "keep-alive",
 }
 
+_OK_RESULT_CODES = {"00", "0"}
+
+
+class DisasterApiError(RuntimeError):
+    """Raised when safetydata.go.kr returns an explicit error response."""
+
+
 async def validate_disaster_api(api_key: str) -> bool:
     try:
         await fetch_disaster_messages(api_key, count=1)
@@ -23,14 +30,83 @@ async def validate_disaster_api(api_key: str) -> bool:
         return False
 
 
+def _check_xml_error(root: ET.Element) -> None:
+    """Raise DisasterApiError if XML response carries an error header."""
+    result_code = (
+        root.findtext(".//header/resultCode")
+        or root.findtext(".//resultCode")
+        or ""
+    ).strip()
+    result_msg = (
+        root.findtext(".//header/resultMsg")
+        or root.findtext(".//resultMsg")
+        or ""
+    ).strip()
+    error_msg = (
+        root.findtext(".//header/errorMsg")
+        or root.findtext(".//errorMsg")
+        or ""
+    ).strip()
+    if (result_code and result_code not in _OK_RESULT_CODES) or error_msg:
+        detail = error_msg or result_msg or "알 수 없는 오류"
+        raise DisasterApiError(
+            f"Disaster API 오류 (code={result_code or '?'}): {detail}"
+        )
+
+    # Outer data.go.kr gateway error envelope (cmmMsgHeader / comMsgHeader).
+    gateway_code = (
+        root.findtext(".//cmmMsgHeader/returnReasonCode")
+        or root.findtext(".//comMsgHeader/returnReasonCode")
+        or ""
+    ).strip()
+    gateway_auth = (
+        root.findtext(".//cmmMsgHeader/returnAuthMsg")
+        or root.findtext(".//comMsgHeader/returnAuthMsg")
+        or ""
+    ).strip()
+    gateway_err = (
+        root.findtext(".//cmmMsgHeader/errMsg")
+        or root.findtext(".//comMsgHeader/errMsg")
+        or ""
+    ).strip()
+    if (
+        (gateway_code and gateway_code not in _OK_RESULT_CODES)
+        or gateway_auth
+        or gateway_err
+    ):
+        detail = " / ".join(p for p in (gateway_auth, gateway_err) if p) or "게이트웨이 오류"
+        raise DisasterApiError(
+            f"Disaster API 게이트웨이 오류 (code={gateway_code or '?'}): {detail}"
+        )
+
+
+def _check_json_error(data: dict[str, Any]) -> None:
+    """Raise DisasterApiError if JSON response carries an error header."""
+    header = data.get("header")
+    if isinstance(header, dict):
+        result_code = str(header.get("resultCode") or "").strip()
+        result_msg = str(header.get("resultMsg") or "").strip()
+        error_msg = str(header.get("errorMsg") or "").strip()
+        if (result_code and result_code not in _OK_RESULT_CODES) or error_msg:
+            detail = error_msg or result_msg or "알 수 없는 오류"
+            raise DisasterApiError(
+                f"Disaster API 오류 (code={result_code or '?'}): {detail}"
+            )
+
+
 def _parse_payload(text: str) -> list[dict[str, Any]]:
     """Parse XML or JSON safetydata.go.kr response.
 
-    Raises RuntimeError if the body is neither valid XML nor a dict-shaped JSON.
+    Raises DisasterApiError if the provider returned an error code/message,
+    or RuntimeError if the body is neither valid XML nor a dict-shaped JSON.
     """
     # Try XML first (production usually returns XML).
     try:
         root = ET.fromstring(text)
+    except ET.ParseError:
+        root = None
+    if root is not None:
+        _check_xml_error(root)
         return [
             {
                 "message": item.findtext("MSG_CN", ""),
@@ -41,8 +117,6 @@ def _parse_payload(text: str) -> list[dict[str, Any]]:
             }
             for item in root.findall(".//row")
         ]
-    except ET.ParseError:
-        pass
     # Fall back to JSON.
     try:
         data = json.loads(text)
@@ -53,7 +127,10 @@ def _parse_payload(text: str) -> list[dict[str, Any]]:
         ) from e
     if not isinstance(data, dict):
         raise RuntimeError(f"Disaster JSON이 dict가 아닙니다: {type(data).__name__}")
-    body = data.get("body", [])
+    _check_json_error(data)
+    body = data.get("body")
+    if body is None:
+        return []
     if not isinstance(body, list):
         raise RuntimeError(f"Disaster JSON 'body' 가 list가 아닙니다: {type(body).__name__}")
     return [

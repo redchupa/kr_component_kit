@@ -51,11 +51,15 @@ class SeoulBusArrivalSensor(CoordinatorEntity, SensorEntity):
         item = self._item()
         if not item:
             return None
-        key = "traTime1" if self._idx == 0 else "traTime2"
-        seconds = _parse_int(item.get(key))
+        slot = self._idx + 1
+        arrival_at = item.get(f"_arrival_at_{slot}")
+        if isinstance(arrival_at, datetime):
+            return arrival_at
+        seconds = _parse_int(item.get(f"traTime{slot}"))
         if seconds <= 0:
             return None
-        return datetime.now(KST) + timedelta(seconds=seconds)
+        base = getattr(self.coordinator, "last_fetched_at", None) or datetime.now(KST)
+        return base + timedelta(seconds=seconds)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

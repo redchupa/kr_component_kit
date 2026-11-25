@@ -49,6 +49,8 @@ class SeoulBusActiveSwitch(SwitchEntity, RestoreEntity):
         if last_state is not None:
             self._attr_is_on = last_state.state == "on"
         self._coordinator.api_enabled = self._attr_is_on
+        if self._attr_is_on and self.hass is not None:
+            self.hass.async_create_task(self._coordinator.async_request_refresh())
 
     async def async_turn_on(self, **kwargs) -> None:
         self._attr_is_on = True
