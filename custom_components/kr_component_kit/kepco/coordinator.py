@@ -6,7 +6,6 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from . import KEPCO_SCAN_INTERVAL
-from .exceptions import KepcoAuthError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,11 +41,4 @@ class KepcoCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             usage = await self._client.async_get_usage_info()
             return {"recent_usage": recent, "usage_info": usage}
         except Exception as e:
-            try:
-                if await self.async_login():
-                    recent = await self._client.async_get_recent_usage()
-                    usage = await self._client.async_get_usage_info()
-                    return {"recent_usage": recent, "usage_info": usage}
-            except Exception:
-                pass
             raise UpdateFailed(f"KEPCO error: {e}") from e

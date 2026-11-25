@@ -1,5 +1,6 @@
 """KMA Weather API - full attributes including dew point + apparent temp."""
 from __future__ import annotations
+
 import logging
 import json
 import math
@@ -8,6 +9,7 @@ from datetime import datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 import aiohttp
+from ..request_pacing import paced_request
 from . import VILAGE_URL
 
 _LOGGER = logging.getLogger(__name__)
@@ -86,7 +88,7 @@ async def fetch_vilage_forecast(session, api_key, nx, ny) -> list[dict]:
     params = {"serviceKey": api_key, "numOfRows": "1000", "pageNo": "1",
               "dataType": "JSON", "base_date": base_date, "base_time": base_time,
               "nx": str(nx), "ny": str(ny)}
-    async with session.get(VILAGE_URL, params=params,
+    async with paced_request(session, "GET", VILAGE_URL, params=params,
                            timeout=aiohttp.ClientTimeout(total=20)) as r:
         text = await r.text()
         status = r.status

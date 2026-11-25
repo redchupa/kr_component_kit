@@ -1,6 +1,6 @@
 """Utility functions - NO pytz, NO blocking imports."""
 from __future__ import annotations
-import random
+import secrets
 import re
 from datetime import datetime
 from typing import Dict, Any, Optional
@@ -46,11 +46,7 @@ def _pkcs1pad2(s, n):
     ba[n - s_len:n] = s_bytes
     ba[n - s_len - 1] = 0
     for i in range(2, n - s_len - 1):
-        while True:
-            rand_byte = random.randint(1, 255)
-            if rand_byte != 0:
-                ba[i] = rand_byte
-                break
+        ba[i] = secrets.randbelow(255) + 1
     ba[0] = 0
     ba[1] = 2
     result = int.from_bytes(ba, byteorder='big')

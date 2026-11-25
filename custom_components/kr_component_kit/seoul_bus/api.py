@@ -6,11 +6,13 @@ everything in this module by `rtNm` because that is what the user types into
 the config flow.
 """
 from __future__ import annotations
+
 import asyncio
 import logging
 from typing import Any
 import aiohttp
 import xmltodict
+from ..request_pacing import paced_request
 from . import SEOUL_BUS_STATION_URL
 
 _LOGGER = logging.getLogger(__name__)
@@ -101,9 +103,8 @@ async def fetch_station(
     """
     url = SEOUL_BUS_STATION_URL.format(key=api_key, ars_id=ars_id)
     try:
-        async with asyncio.timeout(15):
-            async with session.get(url) as r:
-                body = await r.text()
+        async with paced_request(session, "GET", url, timeout=aiohttp.ClientTimeout(total=15)) as r:
+            body = await r.text()
     except (asyncio.TimeoutError, aiohttp.ClientError) as e:
         raise SeoulBusApiError(
             f"Seoul Bus API transport error for arsId={ars_id} "

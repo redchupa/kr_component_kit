@@ -82,24 +82,24 @@ class ArisuDevice:
 
             self._available = True
             self._last_update_success = datetime.now()
-            _LOGGER.debug(f"Arisu data updated successfully for {self.customer_number}")
+            _LOGGER.debug("Arisu data updated successfully")
 
         except ArisuAuthError as err:
             self._available = False
             _LOGGER.error(
-                f"Authentication error for Arisu {self.customer_number}: {err}"
+                f"Authentication error for Arisu: {err}"
             )
             raise UpdateFailed(f"Authentication failed: {err}")
 
         except (ArisuConnectionError, ArisuDataError) as err:
             self._available = False
-            _LOGGER.error(f"Error updating Arisu data for {self.customer_number}: {err}")
+            _LOGGER.error(f"Error updating Arisu data: {err}")
             raise UpdateFailed(f"Error communicating with Arisu API: {err}")
 
         except Exception as err:
             self._available = False
             _LOGGER.error(
-                f"Unexpected error updating Arisu data for {self.customer_number}: {err}"
+                f"Unexpected error updating Arisu data: {err}"
             )
             raise UpdateFailed(f"Unexpected error: {err}")
 

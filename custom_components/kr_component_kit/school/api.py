@@ -1,10 +1,12 @@
 """NEIS Open API Client."""
 from __future__ import annotations
+
 import logging, xml.etree.ElementTree as ET
 from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 from aiohttp import ClientSession, ClientTimeout
+from ..request_pacing import paced_request
 from . import NEIS_BASE, ENDPOINTS
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,7 +29,7 @@ class NeisApiClient:
 
     async def _req(self, ep: str, params: dict | None = None) -> dict[str, Any]:
         p = {"KEY": self.api_key, "Type": "xml", "pIndex": 1, "pSize": 1000, **(params or {})}
-        async with self.session.get(f"{NEIS_BASE}/{ep}", params=p, timeout=_TIMEOUT) as r:
+        async with paced_request(self.session, "GET", f"{NEIS_BASE}/{ep}", params=p, timeout=_TIMEOUT) as r:
             if r.status != 200:
                 snippet = (await r.text())[:200].strip()
                 raise NeisApiError(f"NEIS HTTP {r.status}: {snippet}")

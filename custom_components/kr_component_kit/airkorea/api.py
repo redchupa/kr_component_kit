@@ -1,11 +1,13 @@
 """AirKorea API client - V4 for living index."""
 from __future__ import annotations
+
 import logging
 import json
 from datetime import datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 import aiohttp
+from ..request_pacing import paced_request
 from . import STATION_URL, REALTIME_URL, FORECAST_URL
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,7 +47,7 @@ async def search_stations(session, api_key, addr="") -> list[dict]:
               "numOfRows": "100", "pageNo": "1"}
     if addr:
         params["addr"] = addr
-    async with session.get(STATION_URL, params=params, timeout=_TIMEOUT) as r:
+    async with paced_request(session, "GET", STATION_URL, params=params, timeout=_TIMEOUT) as r:
         text = await r.text()
         status = r.status
     data = _check_status_and_parse(text, status)
@@ -62,7 +64,7 @@ async def fetch_realtime(session, api_key, station_name) -> dict[str, Any]:
     params = {"serviceKey": api_key, "returnType": "json", "numOfRows": "1",
               "pageNo": "1", "stationName": station_name, "dataTerm": "DAILY",
               "ver": "1.5"}
-    async with session.get(REALTIME_URL, params=params, timeout=_TIMEOUT) as r:
+    async with paced_request(session, "GET", REALTIME_URL, params=params, timeout=_TIMEOUT) as r:
         text = await r.text()
         status = r.status
     data = _check_status_and_parse(text, status)
@@ -76,7 +78,7 @@ async def fetch_realtime(session, api_key, station_name) -> dict[str, Any]:
 async def fetch_forecast(session, api_key) -> list[dict]:
     params = {"serviceKey": api_key, "returnType": "json", "numOfRows": "10",
               "pageNo": "1", "searchDate": datetime.now(KST).strftime("%Y-%m-%d")}
-    async with session.get(FORECAST_URL, params=params, timeout=_TIMEOUT) as r:
+    async with paced_request(session, "GET", FORECAST_URL, params=params, timeout=_TIMEOUT) as r:
         text = await r.text()
         status = r.status
     data = _check_status_and_parse(text, status)
@@ -105,7 +107,7 @@ async def _fetch_living_v4(session, api_key, url, area_no) -> dict[str, Any]:
                   "areaNo": area_no, "time": time_str,
                   "numOfRows": "10", "pageNo": "1"}
         try:
-            async with session.get(url, params=params,
+            async with paced_request(session, "GET", url, params=params,
                                    timeout=aiohttp.ClientTimeout(total=10)) as r:
                 if r.status != 200:
                     _LOGGER.debug("Living V4 HTTP %s for time=%s", r.status, time_str)

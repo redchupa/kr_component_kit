@@ -15,6 +15,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
+from ..request_pacing import paced_curl_request
 from .exceptions import SafetyAlertConnectionError
 from ..const import LOGGER, TZ_ASIA_SEOUL
 
@@ -62,7 +63,7 @@ class SafetyAlertApiClient:
 
         try:
             async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
-                response = await session.get(
+                response = await paced_curl_request(session, "GET",
                     _BASE_URL,
                     params=params,
                     headers=_HEADERS,

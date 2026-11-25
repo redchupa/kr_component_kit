@@ -1,11 +1,13 @@
 """Earthquake API - uses params= dict."""
 from __future__ import annotations
+
 import logging
 import json
 import math
 import xml.etree.ElementTree as ET
 from typing import Any
 import aiohttp
+from ..request_pacing import paced_request
 from . import EQ_URL
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,7 +25,7 @@ async def fetch_earthquakes(session, api_key, count=20) -> list[dict]:
               "dataType": "JSON",
               "fromTmFc": start.strftime("%Y%m%d"),
               "toTmFc": end.strftime("%Y%m%d")}
-    async with session.get(EQ_URL, params=params,
+    async with paced_request(session, "GET", EQ_URL, params=params,
                            timeout=aiohttp.ClientTimeout(total=15)) as r:
         text = await r.text()
         status = r.status

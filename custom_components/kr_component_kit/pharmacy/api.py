@@ -7,11 +7,13 @@ non-XML bodies and surface a readable error instead of letting
 ET.ParseError bubble up unexplained.
 """
 from __future__ import annotations
+
 import logging
 import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.parse import unquote
 import aiohttp
+from ..request_pacing import paced_request
 from . import PHARMACY_URL
 
 _LOGGER = logging.getLogger(__name__)
@@ -104,7 +106,7 @@ async def fetch_pharmacies(api_key: str, q0: str, q1: str = "",
         params["Q1"] = q1
 
     async with aiohttp.ClientSession(headers=_HEADERS) as session:
-        async with session.get(PHARMACY_URL, params=params, timeout=_TIMEOUT) as r:
+        async with paced_request(session, "GET", PHARMACY_URL, params=params, timeout=_TIMEOUT) as r:
             text = await r.text()
             if r.status != 200:
                 snippet = text[:200].strip()

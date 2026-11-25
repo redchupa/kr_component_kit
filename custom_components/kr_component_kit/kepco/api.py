@@ -1,8 +1,10 @@
 """KEPCO API client - NO module-level curl_cffi import."""
 from __future__ import annotations
+
 import json
 import logging
 
+from ..request_pacing import paced_curl_request
 from .exceptions import KepcoApiError, KepcoAuthError
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,7 +36,7 @@ class KepcoApiClient:
     async def async_get_session_and_rsa_key(self):
         from bs4 import BeautifulSoup  # lazy import
         url = "https://pp.kepco.co.kr:8030/intro.do"
-        result = await self._session.get(url=url)
+        result = await paced_curl_request(self._session, "GET", url=url)
         result.raise_for_status()
         html_text = result.text
         soup = BeautifulSoup(html_text, "html.parser")
@@ -42,17 +44,14 @@ class KepcoApiClient:
         rsa_exponent_tag = soup.find("input", {"id": "RSAExponent"})
         sessid_tag = soup.find("input", {"id": "SESSID"})
         if not rsa_modulus_tag or not rsa_exponent_tag or not sessid_tag:
-            raise KepcoAuthError("Failed to get RSA keys from intro page")
+            raise KepcoApiError("Failed to get RSA keys from intro page")
         return (rsa_modulus_tag.get("value").strip(),
                 rsa_exponent_tag.get("value").strip(),
                 sessid_tag.get("value").strip())
 
     async def async_login(self, username, password):
         self.set_credentials(username, password)
-        try:
-            rsa_modulus, rsa_exponent, sessid = await self.async_get_session_and_rsa_key()
-        except KepcoAuthError:
-            return False
+        rsa_modulus, rsa_exponent, sessid = await self.async_get_session_and_rsa_key()
         RSAKey = _get_rsa_key()
         try:
             rsa_key = RSAKey()
@@ -72,17 +71,15 @@ class KepcoApiClient:
             "Cookie": f"JSESSIONID={sessid}",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
         }
-        try:
-            response = await self._session.post(
-                "https://pp.kepco.co.kr:8030/login",
-                data={"USER_ID": user_id, "USER_PW": user_pw},
-                headers=headers, allow_redirects=True)
-        except Exception as e:
-            _LOGGER.error("KEPCO login HTTP failed: %s", e)
+        response = await paced_curl_request(
+            self._session, "POST", "https://pp.kepco.co.kr:8030/login",
+            data={"USER_ID": user_id, "USER_PW": user_pw},
+            headers=headers, allow_redirects=True,
+        )
+        if response.status_code == 401:
             return False
         if response.status_code != 200:
-            _LOGGER.warning("KEPCO login HTTP %s", response.status_code)
-            return False
+            raise KepcoApiError(f"KEPCO login HTTP {response.status_code}")
         url_str = str(response.url)
         if any(marker in url_str for marker in _LOGIN_OK_URL_MARKERS):
             return True
@@ -91,39 +88,27 @@ class KepcoApiClient:
             if marker in body:
                 _LOGGER.warning("KEPCO login rejected: %s", marker)
                 return False
-        # Unknown post-login state — log a snippet so we can update markers
-        # if KEPCO renames the redirect target.
-        _LOGGER.warning(
-            "KEPCO login: unknown redirect %s, body[:200]=%s",
-            url_str, body[:200].strip(),
-        )
-        return False
+        raise KepcoApiError("KEPCO login returned an unrecognized page")
 
     async def _request(self, method, url, **kwargs):
-        """Issue a request, retrying once with re-login on auth-shaped failures.
-
-        We **only** retry on JSON-decode failures (typical KEPCO behaviour for
-        an expired session — the gateway returns the login HTML with status
-        200), not on every exception. Network errors and HTTP errors must
-        propagate so transient outages aren't mistaken for bad credentials,
-        which would otherwise hammer the login endpoint and risk lockout.
-        """
-        response = await self._session.request(method, url, **kwargs)
-        try:
-            return json.loads(response.text)
-        except (json.JSONDecodeError, ValueError):
-            # Likely the session expired and we got an HTML page back.
-            _LOGGER.debug("KEPCO request %s returned non-JSON; re-login + retry", url)
-            if not await self.async_login(self._username, self._password):
-                raise KepcoAuthError("Re-login failed during retry")
-            response = await self._session.request(method, url, **kwargs)
+        """Renew an expired login once, only for an identifiable login response."""
+        for attempt in range(2):
+            response = await paced_curl_request(self._session, method, url, **kwargs)
+            login_page = response.status_code == 401 or (
+                response.status_code == 200
+                and "RSAModulus" in response.text
+                and "SESSID" in response.text
+            )
+            if login_page:
+                if attempt or not await self.async_login(self._username, self._password):
+                    raise KepcoAuthError("KEPCO session could not be renewed")
+                continue
+            if response.status_code != 200:
+                raise KepcoApiError(f"KEPCO usage HTTP {response.status_code}")
             try:
                 return json.loads(response.text)
-            except (json.JSONDecodeError, ValueError) as e:
-                snippet = (response.text or "")[:200].strip()
-                raise KepcoApiError(
-                    f"KEPCO 응답이 JSON이 아닙니다 (재로그인 후): {snippet}"
-                ) from e
+            except ValueError as err:
+                raise KepcoApiError("KEPCO usage response was not JSON") from err
 
     async def async_get_recent_usage(self):
         return await self._request("POST", "https://pp.kepco.co.kr:8030/low/main/recent_usage.do", json={})

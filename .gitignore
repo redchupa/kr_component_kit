@@ -21,4 +21,5 @@ pharmacy_READY
 pharmacy_poll.py
 test_pharmacy_key.py
 test_*.py
+!/tests/test_*.py
 *_poll.py

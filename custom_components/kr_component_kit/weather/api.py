@@ -1,9 +1,11 @@
 """KMA Weather Warning API client."""
 from __future__ import annotations
+
 import logging
 from datetime import datetime
 from typing import Any
 import aiohttp
+from ..request_pacing import paced_request
 from ..const import TZ_ASIA_SEOUL
 from . import (KMA_API_BASE, EVENT_TYPE_ADVISORY, EVENT_TYPE_CANCELLED,
                EVENT_TYPE_NONE, EVENT_TYPE_PRE_ADVISORY, EVENT_TYPE_PRE_WARNING,
@@ -37,7 +39,7 @@ async def validate_kma_api(api_key: str, area_code: str) -> bool:
               "areaCode": area_code, "warningType": "1", "dataType": "json"}
     try:
         async with aiohttp.ClientSession() as s:
-            async with s.get(KMA_API_BASE, params=params, timeout=aiohttp.ClientTimeout(total=15)) as r:
+            async with paced_request(s, "GET", KMA_API_BASE, params=params, timeout=aiohttp.ClientTimeout(total=15)) as r:
                 if r.status != 200:
                     return False
                 d = await r.json(content_type=None)
@@ -50,7 +52,7 @@ async def fetch_warning(session: aiohttp.ClientSession, api_key: str,
     params = {"serviceKey": api_key, "numOfRows": "10", "pageNo": "1",
               "areaCode": area_code, "warningType": str(warning_type), "dataType": "json"}
     try:
-        async with session.get(KMA_API_BASE, params=params,
+        async with paced_request(session, "GET", KMA_API_BASE, params=params,
                                timeout=aiohttp.ClientTimeout(total=30)) as r:
             if r.status != 200:
                 return {"event_type": EVENT_TYPE_NONE, "raw": None}

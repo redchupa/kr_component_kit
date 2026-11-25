@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from typing import TYPE_CHECKING, Any, Dict
 
 import aiohttp
 
+if TYPE_CHECKING:
+    from bs4 import BeautifulSoup
+
+from ..request_pacing import paced_request
 from .exceptions import ArisuConnectionError, ArisuDataError
 import logging
 _LOGGER = logging.getLogger(__name__)
@@ -29,66 +33,22 @@ class ArisuApiClient:
     async def async_get_water_bill_data(
         self, customer_number: str, customer_name: str
     ) -> Dict[str, Any]:
-        """Get water bill information from Arisu for current and previous month."""
-        current_date = datetime.now()
-        current_month = current_date.strftime("%Y-%m")
+        """Return the latest bill from the current or two preceding months."""
+        month = datetime.now().date().replace(day=1)
+        tried_months = []
+        for _ in range(3):
+            billing_month = month.strftime("%Y-%m")
+            tried_months.append(billing_month)
+            bill = await self.async_get_water_bill(customer_number, customer_name, billing_month)
+            if bill.get("success"):
+                bill["billing_month"] = billing_month
+                return bill
+            month = (month - timedelta(days=1)).replace(day=1)
 
-        # 지난달 계산
-        previous_date = current_date - timedelta(days=current_date.day)
-        previous_month = previous_date.strftime("%Y-%m")
-
-        pprevious_date = previous_date - timedelta(days=previous_date.day)
-        pprevious_month = pprevious_date.strftime("%Y-%m")
-
-        _LOGGER.debug(
-            f"Trying to get Arisu data for {customer_name} (#{customer_number}): current month={current_month}, previous month={previous_month}"
-        )
-
-        # 현재 월 먼저 시도
-        current_data = await self.async_get_water_bill(
-            customer_number, customer_name, current_month
-        )
-
-        if current_data.get("success", False):
-            _LOGGER.debug(
-                f"Successfully got current month data for {customer_name} (#{customer_number})"
-            )
-            current_data["billing_month"] = current_month
-            return current_data
-
-        _LOGGER.debug(
-            f"No current month data, trying previous month for {customer_name} (#{customer_number})"
-        )
-        previous_data = await self.async_get_water_bill(
-            customer_number, customer_name, previous_month
-        )
-
-        if previous_data.get("success", False):
-            _LOGGER.debug(
-                f"Successfully got previous month data for {customer_name} (#{customer_number})"
-            )
-            previous_data["billing_month"] = previous_month
-            return previous_data
-
-        _LOGGER.debug(
-            f"No current month data, trying previous month for {customer_name} (#{pprevious_month})"
-        )
-        pprevious_data = await self.async_get_water_bill(
-            customer_number, customer_name, pprevious_month
-        )
-
-        if pprevious_data.get("success", False):
-            _LOGGER.debug(
-                f"Successfully got previous month data for {customer_name} (#{customer_number})"
-            )
-            pprevious_data["billing_month"] = previous_month
-            return pprevious_data
-
-        # 둘 다 실패하면 오류 반환
         return {
             "success": False,
-            "error": f"No bill data found for {current_month} and {previous_month} {pprevious_month}",
-            "tried_months": [current_month, previous_month, pprevious_month],
+            "error": f"No bill data found for {', '.join(tried_months)}",
+            "tried_months": tried_months,
         }
 
     async def async_get_water_bill(
@@ -133,11 +93,9 @@ class ArisuApiClient:
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
             }
 
-            _LOGGER.debug(
-                f"Sending Arisu request with customer_number: {customer_number}, customer_name: {customer_name}, billing_month: {billing_month}"
-            )
+            _LOGGER.debug("Requesting Arisu bill for %s", billing_month)
 
-            async with self._session.post(
+            async with paced_request(self._session, "POST",
                 self._base_url,
                 data=form_data,
                 headers=headers,
@@ -162,7 +120,7 @@ class ArisuApiClient:
                     return self._parse_html_response(html_content)
                 else:
                     _LOGGER.warning(
-                        f"No bill data structure found for customer: {customer_name} (#{customer_number})"
+                        "No bill data structure found for %s", billing_month
                     )
                     return {"success": False, "error": "No bill data structure found"}
 
@@ -185,7 +143,7 @@ class ArisuApiClient:
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             }
 
-            async with self._session.get(
+            async with paced_request(self._session, "GET",
                 self._main_url,
                 headers=headers,
             ) as response:

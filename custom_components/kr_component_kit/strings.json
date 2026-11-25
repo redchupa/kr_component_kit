@@ -2,6 +2,7 @@
   "config": {
     "step": {
       "user": {
+        "description": "To reduce load on providers, requests to the same server run one at a time. The first request may wait up to 15 seconds. Later requests are spaced 8–12 seconds apart and can take longer when several entries share a server. If requests are paused after an error, Settings → System → Repairs shows when requests can resume.",
         "title": "Select Service",
         "menu_options": {
           "weather_warning": "Weather Warning (KMA)",
@@ -289,6 +290,7 @@
   "options": {
     "step": {
       "init": {
+        "description": "To reduce load on providers, requests to the same server run one at a time. The first request may wait up to 15 seconds. Later requests are spaced 8–12 seconds apart and can take longer when several entries share a server. If requests are paused after an error, Settings → System → Repairs shows when requests can resume.",
         "title": "Edit Settings",
         "menu_options": {
           "seoul_bus_opt_add": "🚏 Add Stop",
@@ -415,6 +417,20 @@
       "school_class": {
         "name": "Class schedule"
       }
+    }
+  },
+  "issues": {
+    "provider_wait": {
+      "title": "Requests to {host} are paused",
+      "description": "Requests to {host} are paused after a rate limit, server error or connection failure. Requests can resume after {retry_at}. Automatic polling retries on its next scheduled update after that time. Manual refresh follows the same limit."
+    }
+  },
+  "exceptions": {
+    "refresh_wait": {
+      "message": "Requests to {host} are paused. Try again in {seconds} seconds."
+    },
+    "polling_disabled": {
+      "message": "Polling for this stop is off. Turn on its activation switch before refreshing."
     }
   }
 }

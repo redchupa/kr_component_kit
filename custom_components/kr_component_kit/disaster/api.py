@@ -1,45 +1,19 @@
-"""Disaster message API (재난안전데이터포털).
-
-safetydata.go.kr drops connections from clients with Python's default TLS
-fingerprint ("Connection reset by peer" during SSL handshake). curl_cffi's
-browser impersonation produces a TLS ClientHello the server accepts — but
-the server's TLS stack is picky about which profile, and the bare alias
-``"chrome"`` (which resolves to whichever Chrome curl_cffi has packaged
-most recently) sometimes gets reset. We try a small list of widely-tested
-profiles in order and reuse the first one that works for the rest of the
-process lifetime.
-"""
+"""Disaster message API (재난안전데이터포털)."""
 from __future__ import annotations
-import asyncio
+
 import json
-import logging
 import xml.etree.ElementTree as ET
 from typing import Any
+from ..request_pacing import paced_curl_request
 
-_LOGGER = logging.getLogger(__name__)
 DISASTER_URL = "https://www.safetydata.go.kr/V2/api/DSSP-IF-00247"
 _TIMEOUT = 20
 
-# Order matters: middle-aged Chrome profiles are the most consistently
-# accepted by Korean government endpoints. Newer ones occasionally trip
-# server-side TLS feature checks; very old ones get rejected by HSTS.
-_IMPERSONATE_PROFILES = (
-    "chrome120",
-    "chrome124",
-    "chrome131",
-    "chrome116",
-    "safari17_0",
-)
 _BROWSER_HEADERS = {
     "Accept": "application/json, text/xml, */*;q=0.8",
     "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
     "Connection": "keep-alive",
 }
-
-# Cache the first profile we observed to work — avoids burning seconds on
-# retries every poll once we know which one the server likes.
-_working_profile: str | None = None
-
 
 async def validate_disaster_api(api_key: str) -> bool:
     try:
@@ -95,54 +69,14 @@ def _parse_payload(text: str) -> list[dict[str, Any]]:
     ]
 
 
-async def _fetch_with_profile(profile: str, params: dict[str, str]) -> str:
-    # Lazy import: importing curl_cffi at module top runs blocking disk I/O
-    # (listdir/read_text on package metadata) which HA flags inside the event
-    # loop during async_setup_entry. Deferring to first use keeps setup
-    # loop-safe (matches the safety_alert/kepco pattern).
+async def fetch_disaster_messages(api_key: str, count: int = 30) -> list[dict[str, Any]]:
     from curl_cffi import requests as cffi_requests
 
-    async with cffi_requests.AsyncSession(impersonate=profile) as s:
-        r = await s.get(
-            DISASTER_URL,
-            params=params,
-            headers=_BROWSER_HEADERS,
-            timeout=_TIMEOUT,
-        )
-        return r.text
-
-
-async def fetch_disaster_messages(api_key: str, count: int = 30) -> list[dict[str, Any]]:
-    global _working_profile
     params = {"serviceKey": api_key, "numOfRows": str(count), "pageNo": "1"}
-
-    # Build the order to try: known-good first, then the rest.
-    if _working_profile and _working_profile in _IMPERSONATE_PROFILES:
-        ordered = (_working_profile, *(p for p in _IMPERSONATE_PROFILES if p != _working_profile))
-    else:
-        ordered = _IMPERSONATE_PROFILES
-
-    last_err: Exception | None = None
-    for attempt, profile in enumerate(ordered):
-        try:
-            text = await _fetch_with_profile(profile, params)
-            if profile != _working_profile:
-                _LOGGER.info("Disaster API: using impersonation profile %s", profile)
-                _working_profile = profile
-            return _parse_payload(text)
-        except Exception as err:  # noqa: BLE001 — curl_cffi raises plain Exception subclasses
-            last_err = err
-            _LOGGER.debug(
-                "Disaster API attempt %d with %s failed: %s",
-                attempt + 1,
-                profile,
-                err,
-            )
-            # Short backoff before trying the next profile so we don't hammer
-            # a flapping server with a tight loop.
-            if attempt + 1 < len(ordered):
-                await asyncio.sleep(0.5 * (attempt + 1))
-
-    raise RuntimeError(
-        f"safetydata.go.kr rejected all impersonation profiles: {last_err}"
-    ) from last_err
+    async with cffi_requests.AsyncSession(impersonate="chrome120") as session:
+        response = await paced_curl_request(session, "GET",
+            DISASTER_URL, params=params, headers=_BROWSER_HEADERS, timeout=_TIMEOUT
+        )
+        if response.status_code != 200:
+            raise RuntimeError(f"Disaster API HTTP {response.status_code}")
+        return _parse_payload(response.text)

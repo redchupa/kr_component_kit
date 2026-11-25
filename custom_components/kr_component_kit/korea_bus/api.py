@@ -9,6 +9,7 @@ All three rely on KakaoMap's mobile site.  When the HTML/JSON layout changes,
 fixes only need to land in this module.
 """
 from __future__ import annotations
+
 import asyncio
 import html
 import logging
@@ -16,6 +17,7 @@ import re
 import urllib.parse
 from typing import Any
 import aiohttp
+from ..request_pacing import paced_request
 from . import KAKAO_ARRIVALS_URL, KAKAO_HEADERS, KAKAO_SEARCH_URL, KAKAO_STATION_URL
 
 _LOGGER = logging.getLogger(__name__)
@@ -48,12 +50,11 @@ async def search_stops(
     """
     url = f"{KAKAO_SEARCH_URL}?q={urllib.parse.quote(name)}&lvl=2#!/all/list/bus"
     try:
-        async with asyncio.timeout(10):
-            async with session.get(url, headers=KAKAO_HEADERS) as r:
-                if r.status != 200:
-                    raise KoreaBusApiError(
-                        f"KakaoMap search HTTP {r.status} for q={name!r}")
-                body = await r.text()
+        async with paced_request(session, "GET", url, headers=KAKAO_HEADERS, timeout=aiohttp.ClientTimeout(total=10)) as r:
+            if r.status != 200:
+                raise KoreaBusApiError(
+                    f"KakaoMap search HTTP {r.status} for q={name!r}")
+            body = await r.text()
     except (asyncio.TimeoutError, aiohttp.ClientError) as e:
         raise KoreaBusApiError(f"KakaoMap search transport error: {e}") from e
 
@@ -114,12 +115,11 @@ async def fetch_stop_routes(
     """
     url = f"{KAKAO_STATION_URL}?busStopId={stop_id}"
     try:
-        async with asyncio.timeout(10):
-            async with session.get(url, headers=KAKAO_HEADERS) as r:
-                if r.status != 200:
-                    raise KoreaBusApiError(
-                        f"KakaoMap stationInfo HTTP {r.status} for stop={stop_id}")
-                body = await r.text()
+        async with paced_request(session, "GET", url, headers=KAKAO_HEADERS, timeout=aiohttp.ClientTimeout(total=10)) as r:
+            if r.status != 200:
+                raise KoreaBusApiError(
+                    f"KakaoMap stationInfo HTTP {r.status} for stop={stop_id}")
+            body = await r.text()
     except (asyncio.TimeoutError, aiohttp.ClientError) as e:
         raise KoreaBusApiError(
             f"KakaoMap stationInfo transport error for stop={stop_id}: {e}") from e
@@ -154,12 +154,11 @@ async def fetch_arrivals(
     url = f"{KAKAO_ARRIVALS_URL}?busStopId={stop_id}"
     headers = _arrival_headers(stop_id)
     try:
-        async with asyncio.timeout(10):
-            async with session.get(url, headers=headers) as r:
-                if r.status != 200:
-                    raise KoreaBusApiError(
-                        f"KakaoMap arrivals HTTP {r.status} for stop={stop_id}")
-                data = await r.json(content_type=None)
+        async with paced_request(session, "GET", url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as r:
+            if r.status != 200:
+                raise KoreaBusApiError(
+                    f"KakaoMap arrivals HTTP {r.status} for stop={stop_id}")
+            data = await r.json(content_type=None)
     except (asyncio.TimeoutError, aiohttp.ClientError) as e:
         raise KoreaBusApiError(
             f"KakaoMap arrivals transport error for stop={stop_id}: {e}") from e

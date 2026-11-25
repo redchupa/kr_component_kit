@@ -1,9 +1,11 @@
 """Bus arrival API using KakaoMap (reliable, no API key needed)."""
 from __future__ import annotations
+
 import logging
 import json
 from typing import Any
 import aiohttp
+from ..request_pacing import paced_request
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -14,7 +16,7 @@ async def fetch_stop_data(session: aiohttp.ClientSession, stop_id: str) -> dict[
     """Fetch stop data from KakaoMap Bus."""
     url = KAKAO_BUS_URL.format(stop_id)
     headers = {"User-Agent": "Mozilla/5.0"}
-    async with session.get(url, headers=headers,
+    async with paced_request(session, "GET", url, headers=headers,
                            timeout=aiohttp.ClientTimeout(total=10)) as r:
         r.raise_for_status()
         return json.loads(await r.text())

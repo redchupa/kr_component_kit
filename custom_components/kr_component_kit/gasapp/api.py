@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional
 
 import aiohttp
 
+from ..request_pacing import paced_request
 from .exceptions import GasAppAuthError, GasAppConnectionError, GasAppDataError
 import logging
 _LOGGER = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ class GasAppApiClient:
         headers = self._get_headers()
 
         try:
-            async with self._session.request(
+            async with paced_request(self._session,
                 method, url, headers=headers, **kwargs
             ) as response:
                 _LOGGER.debug(f"GasApp API request to {url} status: {response.status}")

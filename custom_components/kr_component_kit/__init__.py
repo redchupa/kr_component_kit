@@ -24,6 +24,14 @@ PLATFORM_MAP = {
     ENTRY_KOREA_BUS: [Platform.SENSOR, Platform.BUTTON, Platform.SWITCH],
 }
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Connect provider cooldowns to Home Assistant Repairs."""
+    from .request_pacing import setup_pacing_notices
+
+    setup_pacing_notices(hass)
+    return True
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate older config entries forward.
 
@@ -240,7 +248,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         from .kepco.exceptions import KepcoAuthError
         c = KepcoCoordinator(hass, entry.data["username"], entry.data["password"])
         try:
-            await c.async_login()
+            if not await c.async_login():
+                raise KepcoAuthError("Credentials rejected")
         except KepcoAuthError as e:
             raise ConfigEntryAuthFailed(f"KEPCO 로그인 실패: {e}") from e
         except Exception as e:  # noqa: BLE001

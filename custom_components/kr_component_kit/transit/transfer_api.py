@@ -8,12 +8,14 @@ Note: These APIs require a data.go.kr service key registered for
 The stSrch parameter must be URL-encoded Korean text.
 """
 from __future__ import annotations
+
 import logging
 import json
 import xml.etree.ElementTree as ET
 from typing import Any
 from urllib.parse import quote
 import aiohttp
+from ..request_pacing import paced_request
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -69,7 +71,7 @@ async def search_location(session: aiohttp.ClientSession,
     _LOGGER.debug("search_location: keyword=%s", keyword)
 
     try:
-        async with session.get(LOC_URL, params=params,
+        async with paced_request(session, "GET", LOC_URL, params=params,
                                timeout=aiohttp.ClientTimeout(total=15)) as r:
             text = await r.text()
             _LOGGER.debug("search_location: status=%s len=%d", r.status, len(text))
@@ -97,7 +99,7 @@ async def search_path(session: aiohttp.ClientSession, api_key: str,
     _LOGGER.debug("search_path: %s,%s -> %s,%s", sx, sy, ex, ey)
 
     try:
-        async with session.get(PATH_URL, params=params,
+        async with paced_request(session, "GET", PATH_URL, params=params,
                                timeout=aiohttp.ClientTimeout(total=15)) as r:
             text = await r.text()
             _LOGGER.debug("search_path: status=%s len=%d", r.status, len(text))

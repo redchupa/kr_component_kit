@@ -1,9 +1,11 @@
 """Seoul subway bulk arrival API client."""
 from __future__ import annotations
+
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 import aiohttp
+from ..request_pacing import paced_request
 from . import SUBWAY_BULK_URL, SUBWAY_LINES
 
 _LOGGER = logging.getLogger(__name__)
@@ -14,7 +16,7 @@ async def validate_seoul_api(api_key: str) -> bool:
     url = SUBWAY_BULK_URL.format(key=api_key, station="서울")
     try:
         async with aiohttp.ClientSession() as s:
-            async with s.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
+            async with paced_request(s, "GET", url, timeout=aiohttp.ClientTimeout(total=15)) as r:
                 if r.status != 200:
                     return False
                 d = await r.json(content_type=None)
@@ -30,7 +32,7 @@ async def fetch_bulk_arrivals(session: aiohttp.ClientSession, api_key: str,
                                station: str) -> list[dict[str, Any]]:
     """Fetch all arrivals for a station using bulk API."""
     url = SUBWAY_BULK_URL.format(key=api_key, station=station)
-    async with session.get(url, timeout=aiohttp.ClientTimeout(total=15)) as r:
+    async with paced_request(session, "GET", url, timeout=aiohttp.ClientTimeout(total=15)) as r:
         if r.status != 200:
             return []
         data = await r.json(content_type=None)

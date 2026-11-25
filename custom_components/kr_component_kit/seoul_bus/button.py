@@ -1,20 +1,16 @@
 """Seoul Bus refresh button — one per station."""
 from __future__ import annotations
-import logging
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.components.button import ButtonEntity
 from homeassistant.util import slugify
 from ..const import DOMAIN
 
-_LOGGER = logging.getLogger(__name__)
+from ..request_pacing import check_manual_refresh
+from . import SEOUL_BUS_STATION_URL
 
 
 class SeoulBusRefreshButton(ButtonEntity):
-    """Trigger an immediate coordinator refresh for one station.
-
-    No-op (with a warning) when the activation switch is OFF — pressing
-    the button while polling is disabled would contradict the user's
-    intent for that switch.  Turn the switch on first, then press.
-    """
+    """Request a refresh and report why polling is paused."""
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:refresh"
@@ -32,8 +28,9 @@ class SeoulBusRefreshButton(ButtonEntity):
 
     async def async_press(self) -> None:
         if not getattr(self._coordinator, "api_enabled", True):
-            _LOGGER.warning(
-                "Seoul Bus refresh for %s ignored — activation switch is OFF. "
-                "Turn it on first.", self._coordinator.ars_id)
-            return
+            raise HomeAssistantError(
+                translation_domain=DOMAIN, translation_key="polling_disabled",
+            )
+        check_manual_refresh(SEOUL_BUS_STATION_URL)
         await self._coordinator.async_request_refresh()
+        check_manual_refresh(SEOUL_BUS_STATION_URL)

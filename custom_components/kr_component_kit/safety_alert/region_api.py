@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
+from ..request_pacing import paced_curl_request
 from ..const import LOGGER
 
 _TIMEOUT = 15
@@ -56,7 +57,7 @@ class SafetyAlertRegionApiClient:
         import curl_cffi
         try:
             async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
-                response = await session.post(
+                response = await paced_curl_request(session, "POST",
                     url,
                     json={"sbLawArea1": sido_code},
                     headers=_HEADERS,
@@ -90,7 +91,7 @@ class SafetyAlertRegionApiClient:
         import curl_cffi
         try:
             async with curl_cffi.AsyncSession(impersonate="chrome120") as session:
-                response = await session.post(
+                response = await paced_curl_request(session, "POST",
                     url,
                     json={"sbLawArea1": sido_code, "sbLawArea2": sgg_code},
                     headers=_HEADERS,
