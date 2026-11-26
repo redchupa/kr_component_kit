@@ -34,7 +34,8 @@
         "data": {
           "seoul_api_key": "서울 열린데이터광장 인증키 (지하철)",
           "bus_api_key": "공공데이터포털 서비스 키 (버스)"
-        }
+        },
+        "description": "⚠️ **보안 안내**: 서울 열린데이터광장(`swopenAPI.seoul.go.kr`)과 서울시 버스 API(`ws.bus.go.kr`)는 제공처가 HTTPS를 지원하지 않아 인증키가 암호화되지 않은 HTTP로 전송됩니다."
       },
       "transit_add": {
         "title": "항목 추가",
@@ -208,7 +209,7 @@
       },
       "seoul_bus": {
         "title": "🚌 서울버스 — API 키",
-        "description": "공공데이터포털(data.go.kr)에서 **서울특별시_정류소정보조회 서비스**를 신청해 발급받은 인증키를 입력하세요.\n\n⚠️ **중요**: data.go.kr 키는 활용신청 승인 후 **인증모듈 등록까지 약 24시간** 소요됩니다. 발급 직후 등록 시 'API 키가 유효하지 않다'고 나오면 24시간 후 다시 시도하세요.",
+        "description": "공공데이터포털(data.go.kr)에서 **서울특별시_정류소정보조회 서비스**를 신청해 발급받은 인증키를 입력하세요.\n\n⚠️ **중요**: data.go.kr 키는 활용신청 승인 후 **인증모듈 등록까지 약 24시간** 소요됩니다. 발급 직후 등록 시 'API 키가 유효하지 않다'고 나오면 24시간 후 다시 시도하세요.\n\n⚠️ **보안 안내**: 서울시 버스 API(`ws.bus.go.kr`)는 제공처가 HTTPS를 지원하지 않아 인증키가 암호화되지 않은 HTTP로 전송됩니다.",
         "data": {
           "api_key": "공공데이터포털 서비스 키"
         }
@@ -316,57 +317,81 @@
       "seoul_bus_opt_add_routes": {
         "title": "🚌 서울버스 — 새 정류장 노선 선택",
         "description": "이 정류장에서 추적할 노선을 선택하세요.",
-        "data": { "routes": "추적할 노선" }
+        "data": {
+          "routes": "추적할 노선"
+        }
       },
       "seoul_bus_opt_remove": {
         "title": "🗑 서울버스 — 정류장 삭제",
         "description": "삭제할 정류장을 선택하세요 (복수 선택 가능).",
-        "data": { "ars_ids": "삭제할 정류장" }
+        "data": {
+          "ars_ids": "삭제할 정류장"
+        }
       },
       "seoul_bus_opt_edit_routes": {
         "title": "🚌 서울버스 — 노선을 편집할 정류장 선택",
-        "data": { "ars_id": "정류장" }
+        "data": {
+          "ars_id": "정류장"
+        }
       },
       "seoul_bus_opt_edit_routes_pick": {
         "title": "🚌 서울버스 — 노선 재선택",
-        "data": { "routes": "추적할 노선" }
+        "data": {
+          "routes": "추적할 노선"
+        }
       },
       "seoul_bus_opt_edit_key": {
         "title": "🔑 서울버스 — API 키 변경",
-        "description": "변경한 인증키는 저장 직전에 자동 검증합니다.",
-        "data": { "api_key": "공공데이터포털 서비스 키" }
+        "description": "변경한 인증키는 저장 직전에 자동 검증합니다.\n\n⚠️ **보안 안내**: 서울시 버스 API(`ws.bus.go.kr`)는 제공처가 HTTPS를 지원하지 않아 인증키가 암호화되지 않은 HTTP로 전송됩니다.",
+        "data": {
+          "api_key": "공공데이터포털 서비스 키"
+        }
       },
       "korea_bus_opt_add": {
         "title": "🚏 한국 버스 — 추가할 정류장 검색",
         "description": "정류장 이름을 입력하세요 (예: 강남역, 사당).",
-        "data": { "stop_name": "정류장 이름" }
+        "data": {
+          "stop_name": "정류장 이름"
+        }
       },
       "korea_bus_opt_add_pick": {
         "title": "🚏 한국 버스 — 정류장 선택",
-        "data": { "stop_id": "정류장" }
+        "data": {
+          "stop_id": "정류장"
+        }
       },
       "korea_bus_opt_add_routes": {
         "title": "🚌 한국 버스 — 새 정류장 노선 선택",
         "description": "이 정류장에서 추적할 노선을 선택하세요.",
-        "data": { "routes": "추적할 노선" }
+        "data": {
+          "routes": "추적할 노선"
+        }
       },
       "korea_bus_opt_remove": {
         "title": "🗑 한국 버스 — 정류장 삭제",
         "description": "삭제할 정류장을 선택하세요 (복수 선택 가능).",
-        "data": { "stop_ids": "삭제할 정류장" }
+        "data": {
+          "stop_ids": "삭제할 정류장"
+        }
       },
       "korea_bus_opt_edit_routes": {
         "title": "🚌 한국 버스 — 노선을 편집할 정류장 선택",
-        "data": { "stop_id": "정류장" }
+        "data": {
+          "stop_id": "정류장"
+        }
       },
       "korea_bus_opt_edit_routes_pick": {
         "title": "🚌 한국 버스 — 노선 재선택",
-        "data": { "routes": "추적할 노선" }
+        "data": {
+          "routes": "추적할 노선"
+        }
       },
       "korea_bus_opt_edit_interval": {
         "title": "⏱ 한국 버스 — 폴링 주기 변경",
         "description": "카카오맵 API 호출 주기를 초 단위로 설정합니다 (30~3600초).",
-        "data": { "scan_interval": "폴링 주기 (초)" }
+        "data": {
+          "scan_interval": "폴링 주기 (초)"
+        }
       }
     },
     "error": {

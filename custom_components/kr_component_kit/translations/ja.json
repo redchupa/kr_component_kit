@@ -34,7 +34,8 @@
         "data": {
           "seoul_api_key": "ソウル オープンデータ認証キー (地下鉄)",
           "bus_api_key": "data.go.kr サービスキー (バス乗換)"
-        }
+        },
+        "description": "⚠️ **セキュリティ案内**: ソウルオープンデータ(`swopenAPI.seoul.go.kr`)およびソウルバスAPI(`ws.bus.go.kr`)は提供元がHTTPSに対応していないため、APIキーは暗号化されていないHTTPで送信されます。"
       },
       "transit_add": {
         "title": "項目追加",
@@ -208,7 +209,7 @@
       },
       "seoul_bus": {
         "title": "🚌 ソウルバス — APIキー",
-        "description": "data.go.kr で **정류소정보조회 (停留所情報)** サービスを申請し、発行された認証キーを入力してください。送信時にライブAPIで自動検証します。",
+        "description": "data.go.kr で **정류소정보조회 (停留所情報)** サービスを申請し、発行された認証キーを入力してください。送信時にライブAPIで自動検証します。\n\n⚠️ **セキュリティ案内**: ソウルバスAPI(`ws.bus.go.kr`)は提供元がHTTPSに対応していないため、APIキーは暗号化されていないHTTPで送信されます。",
         "data": {
           "api_key": "data.go.kr サービスキー"
         }
@@ -315,56 +316,80 @@
       },
       "seoul_bus_opt_add_routes": {
         "title": "🚌 ソウルバス — 新しい停留所の路線を選択",
-        "data": { "routes": "追跡する路線" }
+        "data": {
+          "routes": "追跡する路線"
+        }
       },
       "seoul_bus_opt_remove": {
         "title": "🗑 ソウルバス — 停留所を削除",
         "description": "削除する停留所を選択してください (複数選択可)。",
-        "data": { "ars_ids": "削除する停留所" }
+        "data": {
+          "ars_ids": "削除する停留所"
+        }
       },
       "seoul_bus_opt_edit_routes": {
         "title": "🚌 ソウルバス — 路線を編集する停留所を選択",
-        "data": { "ars_id": "停留所" }
+        "data": {
+          "ars_id": "停留所"
+        }
       },
       "seoul_bus_opt_edit_routes_pick": {
         "title": "🚌 ソウルバス — 路線を再選択",
-        "data": { "routes": "追跡する路線" }
+        "data": {
+          "routes": "追跡する路線"
+        }
       },
       "seoul_bus_opt_edit_key": {
         "title": "🔑 ソウルバス — APIキーを変更",
-        "description": "変更したキーは保存直前に自動検証されます。",
-        "data": { "api_key": "data.go.kr サービスキー" }
+        "description": "変更したキーは保存直前に自動検証されます。\n\n⚠️ **セキュリティ案内**: ソウルバスAPI(`ws.bus.go.kr`)は提供元がHTTPSに対応していないため、APIキーは暗号化されていないHTTPで送信されます。",
+        "data": {
+          "api_key": "data.go.kr サービスキー"
+        }
       },
       "korea_bus_opt_add": {
         "title": "🚏 韓国バス — 追加する停留所を検索",
         "description": "停留所名を入力してください (例: 江南駅, 사당)。",
-        "data": { "stop_name": "停留所名" }
+        "data": {
+          "stop_name": "停留所名"
+        }
       },
       "korea_bus_opt_add_pick": {
         "title": "🚏 韓国バス — 停留所を選択",
-        "data": { "stop_id": "停留所" }
+        "data": {
+          "stop_id": "停留所"
+        }
       },
       "korea_bus_opt_add_routes": {
         "title": "🚌 韓国バス — 新しい停留所の路線を選択",
-        "data": { "routes": "追跡する路線" }
+        "data": {
+          "routes": "追跡する路線"
+        }
       },
       "korea_bus_opt_remove": {
         "title": "🗑 韓国バス — 停留所を削除",
         "description": "削除する停留所を選択してください (複数選択可)。",
-        "data": { "stop_ids": "削除する停留所" }
+        "data": {
+          "stop_ids": "削除する停留所"
+        }
       },
       "korea_bus_opt_edit_routes": {
         "title": "🚌 韓国バス — 路線を編集する停留所を選択",
-        "data": { "stop_id": "停留所" }
+        "data": {
+          "stop_id": "停留所"
+        }
       },
       "korea_bus_opt_edit_routes_pick": {
         "title": "🚌 韓国バス — 路線を再選択",
-        "data": { "routes": "追跡する路線" }
+        "data": {
+          "routes": "追跡する路線"
+        }
       },
       "korea_bus_opt_edit_interval": {
         "title": "⏱ 韓国バス — ポーリング間隔を変更",
         "description": "カカオマップのポーリング間隔を秒単位で設定します (30〜3600秒)。",
-        "data": { "scan_interval": "ポーリング間隔 (秒)" }
+        "data": {
+          "scan_interval": "ポーリング間隔 (秒)"
+        }
       }
     },
     "error": {

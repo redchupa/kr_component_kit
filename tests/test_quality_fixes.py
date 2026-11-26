@@ -372,3 +372,21 @@ class QualityFixesTests(IsolatedAsyncioTestCase):
             korea_first.assert_not_awaited()
             coords = hass.data["kr_component_kit"][entry.entry_id]["coordinators"]
             self.assertTrue(all(not c.api_enabled for c in coords.values()))
+
+    def test_http_api_key_notice_present_in_all_translations(self):
+        import json
+        from pathlib import Path
+
+        base = Path("custom_components/kr_component_kit")
+        for rel in ("strings.json", "translations/en.json", "translations/ko.json", "translations/ja.json"):
+            data = json.loads((base / rel).read_text(encoding="utf-8"))
+            transit_desc = data["config"]["step"]["transit"].get("description", "")
+            seoul_desc = data["config"]["step"]["seoul_bus"].get("description", "")
+            seoul_opt_desc = data["options"]["step"]["seoul_bus_opt_edit_key"].get("description", "")
+            self.assertIn("HTTP", transit_desc, rel)
+            self.assertIn("swopenAPI.seoul.go.kr", transit_desc, rel)
+            self.assertIn("ws.bus.go.kr", transit_desc, rel)
+            self.assertIn("HTTP", seoul_desc, rel)
+            self.assertIn("ws.bus.go.kr", seoul_desc, rel)
+            self.assertIn("HTTP", seoul_opt_desc, rel)
+            self.assertIn("ws.bus.go.kr", seoul_opt_desc, rel)

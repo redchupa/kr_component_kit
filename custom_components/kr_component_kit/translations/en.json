@@ -34,7 +34,8 @@
         "data": {
           "seoul_api_key": "Seoul Open Data key (subway)",
           "bus_api_key": "data.go.kr service key (bus transfer)"
-        }
+        },
+        "description": "⚠️ **Security notice**: Seoul Open Data (`swopenAPI.seoul.go.kr`) and Seoul Bus API (`ws.bus.go.kr`) do not support HTTPS, so your API key is sent over unencrypted HTTP."
       },
       "transit_add": {
         "title": "Add Item",
@@ -208,7 +209,7 @@
       },
       "seoul_bus": {
         "title": "🚌 Seoul Bus — API Key",
-        "description": "Apply for the **정류소정보조회 (Bus Stop Info)** service on data.go.kr and paste the issued service key. Validated against the live API on submit.",
+        "description": "Apply for the **정류소정보조회 (Bus Stop Info)** service on data.go.kr and paste the issued service key. Validated against the live API on submit.\n\n⚠️ **Security notice**: The Seoul Bus API (`ws.bus.go.kr`) does not support HTTPS, so your API key is sent over unencrypted HTTP.",
         "data": {
           "api_key": "data.go.kr service key"
         }
@@ -315,56 +316,80 @@
       },
       "seoul_bus_opt_add_routes": {
         "title": "🚌 Seoul Bus — Select Routes for New Stop",
-        "data": { "routes": "Routes to track" }
+        "data": {
+          "routes": "Routes to track"
+        }
       },
       "seoul_bus_opt_remove": {
         "title": "🗑 Seoul Bus — Remove Stop(s)",
         "description": "Pick the stops to remove (multi-select).",
-        "data": { "ars_ids": "Stops to remove" }
+        "data": {
+          "ars_ids": "Stops to remove"
+        }
       },
       "seoul_bus_opt_edit_routes": {
         "title": "🚌 Seoul Bus — Pick Stop to Edit",
-        "data": { "ars_id": "Stop" }
+        "data": {
+          "ars_id": "Stop"
+        }
       },
       "seoul_bus_opt_edit_routes_pick": {
         "title": "🚌 Seoul Bus — Re-select Routes",
-        "data": { "routes": "Routes to track" }
+        "data": {
+          "routes": "Routes to track"
+        }
       },
       "seoul_bus_opt_edit_key": {
         "title": "🔑 Seoul Bus — Change API Key",
-        "description": "The new key is validated against the live API before being saved.",
-        "data": { "api_key": "data.go.kr service key" }
+        "description": "The new key is validated against the live API before being saved.\n\n⚠️ **Security notice**: The Seoul Bus API (`ws.bus.go.kr`) does not support HTTPS, so your API key is sent over unencrypted HTTP.",
+        "data": {
+          "api_key": "data.go.kr service key"
+        }
       },
       "korea_bus_opt_add": {
         "title": "🚏 Korea Bus — Search Stop to Add",
         "description": "Search by stop name (e.g. Gangnam Station, 사당).",
-        "data": { "stop_name": "Stop name" }
+        "data": {
+          "stop_name": "Stop name"
+        }
       },
       "korea_bus_opt_add_pick": {
         "title": "🚏 Korea Bus — Pick Stop",
-        "data": { "stop_id": "Stop" }
+        "data": {
+          "stop_id": "Stop"
+        }
       },
       "korea_bus_opt_add_routes": {
         "title": "🚌 Korea Bus — Select Routes for New Stop",
-        "data": { "routes": "Routes to track" }
+        "data": {
+          "routes": "Routes to track"
+        }
       },
       "korea_bus_opt_remove": {
         "title": "🗑 Korea Bus — Remove Stop(s)",
         "description": "Pick the stops to remove (multi-select).",
-        "data": { "stop_ids": "Stops to remove" }
+        "data": {
+          "stop_ids": "Stops to remove"
+        }
       },
       "korea_bus_opt_edit_routes": {
         "title": "🚌 Korea Bus — Pick Stop to Edit",
-        "data": { "stop_id": "Stop" }
+        "data": {
+          "stop_id": "Stop"
+        }
       },
       "korea_bus_opt_edit_routes_pick": {
         "title": "🚌 Korea Bus — Re-select Routes",
-        "data": { "routes": "Routes to track" }
+        "data": {
+          "routes": "Routes to track"
+        }
       },
       "korea_bus_opt_edit_interval": {
         "title": "⏱ Korea Bus — Change Poll Interval",
         "description": "How often to poll KakaoMap, in seconds (30–3600).",
-        "data": { "scan_interval": "Poll interval (seconds)" }
+        "data": {
+          "scan_interval": "Poll interval (seconds)"
+        }
       }
     },
     "error": {
