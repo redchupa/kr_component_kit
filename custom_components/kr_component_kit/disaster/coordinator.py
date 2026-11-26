@@ -29,16 +29,12 @@ class DisasterCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             raise UpdateFailed(str(err)) from err
         except Exception as err:
             self._consecutive_failures += 1
-            # Tolerate transient TLS/connection errors. If we have stale data,
-            # keep serving it; on first load (no stale data), return an empty
-            # list so the entry still loads instead of marking the whole
-            # integration as failed. UpdateFailed kicks in only after we've
-            # observed sustained failures.
-            if self._consecutive_failures <= 5:
+            # Reuse a confirmed response only for short transport outages.
+            if self.data is not None and self._consecutive_failures <= 5:
                 _LOGGER.warning(
                     "Disaster API transient error (%d/5): %s",
                     self._consecutive_failures, err)
-                return self.data if self.data is not None else []
+                return self.data
             raise UpdateFailed(f"Disaster API error: {err}") from err
 
         if self._region_filter:

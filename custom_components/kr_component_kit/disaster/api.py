@@ -127,7 +127,7 @@ def _parse_payload(text: str) -> list[dict[str, Any]]:
     except json.JSONDecodeError as e:
         raise DisasterApiError("재난문자 응답이 XML/JSON 형식이 아닙니다.") from e
     if not isinstance(data, dict):
-        raise RuntimeError(f"Disaster JSON이 dict가 아닙니다: {type(data).__name__}")
+        raise DisasterApiError(f"Disaster JSON이 dict가 아닙니다: {type(data).__name__}")
     _check_json_error(data)
     header = data.get("header")
     if not isinstance(header, dict) or str(header.get("resultCode")).strip() not in _OK_RESULT_CODES:

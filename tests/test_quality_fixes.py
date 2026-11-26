@@ -94,7 +94,7 @@ class QualityFixesTests(IsolatedAsyncioTestCase):
         self.assertEqual(rows[0]["message"], "호우주의보")
 
     def test_disaster_rejects_unknown_envelopes(self):
-        for payload in ('<html><body>Maintenance</body></html>', '{"error":"maintenance"}',
+        for payload in ('[]', 'null', '<html><body>Maintenance</body></html>', '{"error":"maintenance"}',
                         '{"body":[]}', '<response><body/></response>',
                         '{"header":{"resultCode":"00"}}'):
             with self.subTest(payload=payload), self.assertRaises(DisasterApiError):
@@ -119,6 +119,22 @@ class QualityFixesTests(IsolatedAsyncioTestCase):
         coord.data["200"] = {}
         discover()
         self.assertEqual(add.call_args.args[0], ["200"])
+
+    async def test_disaster_first_outage_does_not_publish_zero(self):
+        from custom_components.kr_component_kit.disaster.sensor import (
+            DisasterCountSensor, DisasterMessageSensor,
+        )
+
+        coord = DisasterCoordinator(Mock(), "test")
+        with patch("custom_components.kr_component_kit.disaster.coordinator.fetch_disaster_messages",
+                   side_effect=TimeoutError):
+            with self.assertRaises(UpdateFailed):
+                await coord._async_update_data()
+        owner = SimpleNamespace(coordinator=coord)
+        self.assertIsNone(DisasterCountSensor.native_value.fget(owner))
+        self.assertIsNone(DisasterMessageSensor.native_value.fget(owner))
+        coord.data = []
+        self.assertEqual(DisasterCountSensor.native_value.fget(owner), 0)
 
     async def test_disaster_validate_and_coordinator_fail_on_api_error(self):
         xml_auth_err = (
