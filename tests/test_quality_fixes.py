@@ -93,6 +93,33 @@ class QualityFixesTests(IsolatedAsyncioTestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["message"], "호우주의보")
 
+    def test_disaster_rejects_unknown_envelopes(self):
+        for payload in ('<html><body>Maintenance</body></html>', '{"error":"maintenance"}',
+                        '{"body":[]}', '<response><body/></response>',
+                        '{"header":{"resultCode":"00"}}'):
+            with self.subTest(payload=payload), self.assertRaises(DisasterApiError):
+                _parse_payload(payload)
+
+    def test_discovery_after_setup_registers_each_route_once(self):
+        from custom_components.kr_component_kit.bus_routes import register_routes
+
+        coord = Mock(data=None)
+        entry, add = Mock(), Mock()
+        def factory(coord, route, device_info):
+            return route
+
+        register_routes(entry, coord, [], {}, add, [factory])
+        add.assert_not_called()
+        discover = coord.async_add_listener.call_args.args[0]
+        entry.async_on_unload.assert_called_once_with(coord.async_add_listener.return_value)
+        coord.data = {"100": {}}
+        discover()
+        discover()
+        add.assert_called_once_with(["100"])
+        coord.data["200"] = {}
+        discover()
+        self.assertEqual(add.call_args.args[0], ["200"])
+
     async def test_disaster_validate_and_coordinator_fail_on_api_error(self):
         xml_auth_err = (
             "<response><header><resultCode>30</resultCode>"

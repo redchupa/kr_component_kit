@@ -2,6 +2,7 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from .bus_routes import register_routes
 from .const import *
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry,
@@ -40,10 +41,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry,
                 continue
             di = seoul_bus_station_device(
                 st["ars_id"], st.get("station_name") or st["ars_id"])
-            routes = st.get("routes") or list((coord.data or {}).keys())
-            for rt in routes:
-                entities.append(SeoulBusLowFloorSensor(coord, rt, di))
-                entities.append(SeoulBusFullSensor(coord, rt, di))
+            register_routes(
+                entry, coord, st.get("routes"), di, async_add_entities,
+                (SeoulBusLowFloorSensor, SeoulBusFullSensor),
+            )
 
     if entities:
         async_add_entities(entities)

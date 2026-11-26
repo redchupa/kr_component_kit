@@ -107,6 +107,10 @@ def _parse_payload(text: str) -> list[dict[str, Any]]:
         root = None
     if root is not None:
         _check_xml_error(root)
+        if root.findtext("./header/resultCode", "").strip() not in _OK_RESULT_CODES:
+            raise DisasterApiError("재난문자 응답에 정상 처리 코드가 없습니다.")
+        if root.find("./body") is None:
+            raise DisasterApiError("재난문자 응답에 본문이 없습니다.")
         return [
             {
                 "message": item.findtext("MSG_CN", ""),
@@ -115,24 +119,28 @@ def _parse_payload(text: str) -> list[dict[str, Any]]:
                 "level": item.findtext("EMRG_STEP_NM", ""),
                 "disaster_type": item.findtext("DST_SE_NM", ""),
             }
-            for item in root.findall(".//row")
+            for item in root.findall("./body//row")
         ]
     # Fall back to JSON.
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
-        snippet = text[:200].strip()
-        raise RuntimeError(
-            f"Disaster 응답이 XML/JSON이 아닙니다 (서비스 키 확인): {snippet}"
-        ) from e
+        raise DisasterApiError("재난문자 응답이 XML/JSON 형식이 아닙니다.") from e
     if not isinstance(data, dict):
         raise RuntimeError(f"Disaster JSON이 dict가 아닙니다: {type(data).__name__}")
     _check_json_error(data)
-    body = data.get("body")
+    header = data.get("header")
+    if not isinstance(header, dict) or str(header.get("resultCode")).strip() not in _OK_RESULT_CODES:
+        raise DisasterApiError("재난문자 응답에 정상 처리 코드가 없습니다.")
+    if "body" not in data:
+        raise DisasterApiError("재난문자 응답에 본문이 없습니다.")
+    body = data["body"]
     if body is None:
         return []
     if not isinstance(body, list):
-        raise RuntimeError(f"Disaster JSON 'body' 가 list가 아닙니다: {type(body).__name__}")
+        raise DisasterApiError(f"Disaster JSON 'body' 가 list가 아닙니다: {type(body).__name__}")
+    if any(not isinstance(item, dict) or "MSG_CN" not in item for item in body):
+        raise DisasterApiError("재난문자 응답에 올바르지 않은 항목이 있습니다.")
     return [
         {
             "message": i.get("MSG_CN", ""),
@@ -142,7 +150,6 @@ def _parse_payload(text: str) -> list[dict[str, Any]]:
             "disaster_type": i.get("DST_SE_NM", ""),
         }
         for i in body
-        if isinstance(i, dict)
     ]
 
 

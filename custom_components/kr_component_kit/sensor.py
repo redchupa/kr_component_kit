@@ -1,7 +1,9 @@
 """Sensor platform dispatcher."""
+from functools import partial
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from .bus_routes import register_routes
 from .const import *
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry,
@@ -105,10 +107,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry,
             if not coord:
                 continue
             di = seoul_bus_station_device(st["ars_id"], st.get("station_name") or st["ars_id"])
-            routes = st.get("routes") or list((coord.data or {}).keys())
-            for rt in routes:
-                for idx in range(2):
-                    entities.append(SeoulBusArrivalSensor(coord, rt, idx, di))
+            register_routes(
+                entry, coord, st.get("routes"), di, async_add_entities,
+                tuple(partial(SeoulBusArrivalSensor, index=i) for i in range(2)),
+            )
 
     elif etype == ENTRY_KOREA_BUS:
         from .korea_bus.sensor import KoreaBusArrivalSensor
@@ -118,10 +120,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry,
             if not coord:
                 continue
             di = korea_bus_station_device(stop["stop_id"], stop.get("stop_name") or stop["stop_id"])
-            routes = stop.get("routes") or list((coord.data or {}).keys())
-            for rt in routes:
-                for idx in range(2):
-                    entities.append(KoreaBusArrivalSensor(coord, rt, idx, di))
+            register_routes(
+                entry, coord, stop.get("routes"), di, async_add_entities,
+                tuple(partial(KoreaBusArrivalSensor, index=i) for i in range(2)),
+            )
 
     if entities:
         async_add_entities(entities)
