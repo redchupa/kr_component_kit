@@ -390,3 +390,71 @@ class QualityFixesTests(IsolatedAsyncioTestCase):
             self.assertIn("ws.bus.go.kr", seoul_desc, rel)
             self.assertIn("HTTP", seoul_opt_desc, rel)
             self.assertIn("ws.bus.go.kr", seoul_opt_desc, rel)
+
+    async def test_config_and_options_secret_fields_use_password_selector(self):
+        import ast
+        from pathlib import Path
+        from homeassistant.helpers.selector import TextSelector, TextSelectorType
+        from custom_components.kr_component_kit import config_flow as cf
+        from custom_components.kr_component_kit.const import (
+            CONF_ENTRY_TYPE, ENTRY_AIRKOREA, ENTRY_DISASTER, ENTRY_EARTHQUAKE,
+            ENTRY_FUEL, ENTRY_GASAPP, ENTRY_KEPCO, ENTRY_KMA_WEATHER,
+            ENTRY_TRANSIT, ENTRY_WEATHER,
+        )
+
+        # 1. Static check: every secret field in config_flow.py uses _PASSWORD_SELECTOR
+        src = Path("custom_components/kr_component_kit/config_flow.py").read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        checked = 0
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Dict):
+                for k, v in zip(node.keys, node.values):
+                    if isinstance(k, ast.Call) and k.args and isinstance(k.args[0], ast.Constant):
+                        field_name = k.args[0].value
+                        if field_name in cf._SECRET_FIELDS:
+                            checked += 1
+                            self.assertIsInstance(v, ast.Name, f"{field_name} must use _PASSWORD_SELECTOR")
+                            self.assertEqual(v.id, "_PASSWORD_SELECTOR")
+        self.assertGreaterEqual(checked, 27)
+
+        # 2. Runtime check: _build_schema masks all secret fields and never prefills stored secrets
+        secret_types = [
+            (ENTRY_WEATHER, {"api_key": "SECRET_W", "area_codes": ["L1010000"]}),
+            (ENTRY_TRANSIT, {"seoul_api_key": "SECRET_S", "bus_api_key": "SECRET_B"}),
+            (ENTRY_FUEL, {"api_key": "SECRET_F", "configs": []}),
+            (ENTRY_DISASTER, {"api_key": "SECRET_D"}),
+            (ENTRY_KEPCO, {"username": "u", "password": "SECRET_P"}),
+            (ENTRY_GASAPP, {"token": "SECRET_T", "member_id": "m", "contract_num": "c"}),
+            (ENTRY_AIRKOREA, {"api_key": "SECRET_A", "living_api_key": "SECRET_L"}),
+            (ENTRY_KMA_WEATHER, {"api_key": "SECRET_K"}),
+            (ENTRY_EARTHQUAKE, {"api_key": "SECRET_E"}),
+        ]
+        for etype, data in secret_types:
+            entry = SimpleNamespace(data={CONF_ENTRY_TYPE: etype, **data}, options={})
+            flow = cf.KRPublicDataOptionsFlow(entry)
+            schema = flow._build_schema(etype)
+            for key, validator in schema.schema.items():
+                if key.schema in cf._SECRET_FIELDS:
+                    self.assertIsInstance(validator, TextSelector)
+                    self.assertEqual(validator.config["type"], TextSelectorType.PASSWORD)
+                    # Stored secret must NOT be prefilled as default
+                    self.assertIs(key.default, cf.vol.UNDEFINED)
+
+        # 3. Leaving blank in options preserves stored secret; entering a new one updates it
+        entry = SimpleNamespace(
+            data={CONF_ENTRY_TYPE: ENTRY_DISASTER, "api_key": "EXISTING_KEY"},
+            options={},
+        )
+        flow = cf.KRPublicDataOptionsFlow(entry)
+        flow.hass = SimpleNamespace(
+            config_entries=SimpleNamespace(async_update_entry=Mock())
+        )
+        res = await flow.async_step_init({"api_key": ""})
+        self.assertEqual(res["type"], "create_entry")
+        self.assertEqual(res["data"], {})
+        updated = flow.hass.config_entries.async_update_entry.call_args.kwargs["data"]
+        self.assertEqual(updated["api_key"], "EXISTING_KEY")
+
+        await flow.async_step_init({"api_key": "NEW_KEY"})
+        updated2 = flow.hass.config_entries.async_update_entry.call_args.kwargs["data"]
+        self.assertEqual(updated2["api_key"], "NEW_KEY")

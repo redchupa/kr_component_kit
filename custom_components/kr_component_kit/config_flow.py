@@ -8,7 +8,16 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     SelectOptionDict, SelectSelector, SelectSelectorConfig, SelectSelectorMode,
+    TextSelector, TextSelectorConfig, TextSelectorType,
 )
+
+_PASSWORD_SELECTOR = TextSelector(
+    TextSelectorConfig(type=TextSelectorType.PASSWORD)
+)
+_SECRET_FIELDS = frozenset({
+    "api_key", "seoul_api_key", "bus_api_key",
+    "living_api_key", "password", "token",
+})
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -82,7 +91,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="weather_warning",
             data_schema=vol.Schema({
-                vol.Required("api_key"): str,
+                vol.Required("api_key"): _PASSWORD_SELECTOR,
                 vol.Required("area_codes"): SelectSelector(
                     SelectSelectorConfig(options=area_options, multiple=True,
                                          mode=SelectSelectorMode.DROPDOWN)),
@@ -103,8 +112,8 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="transit",
             data_schema=vol.Schema({
-                vol.Optional("seoul_api_key"): str,
-                vol.Optional("bus_api_key", description={"suggested_value": "환승경로 조회용 (선택)"}): str,
+                vol.Optional("seoul_api_key"): _PASSWORD_SELECTOR,
+                vol.Optional("bus_api_key"): _PASSWORD_SELECTOR,
             }))
 
     async def async_step_transit_add(self, user_input=None) -> FlowResult:
@@ -232,7 +241,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="fuel",
             data_schema=vol.Schema({
-                vol.Required("api_key"): str,
+                vol.Required("api_key"): _PASSWORD_SELECTOR,
                 vol.Required("sido_codes"): SelectSelector(
                     SelectSelectorConfig(options=sido_options, multiple=True,
                                          mode=SelectSelectorMode.DROPDOWN)),
@@ -264,7 +273,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="school",
             data_schema=vol.Schema({
-                vol.Required("api_key"): str,
+                vol.Required("api_key"): _PASSWORD_SELECTOR,
                 vol.Required("school_level", default="elementary"): vol.In(SCHOOL_LEVELS),
             }),
             errors=errors)
@@ -382,7 +391,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
         return self.async_show_form(step_id="disaster",
             data_schema=vol.Schema({
-                vol.Required("api_key"): str,
+                vol.Required("api_key"): _PASSWORD_SELECTOR,
                 vol.Optional("region_filter", default=""): SelectSelector(
                     SelectSelectorConfig(options=region_opts,
                                          mode=SelectSelectorMode.DROPDOWN)),
@@ -521,7 +530,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                               "password": password})
         return self.async_show_form(step_id="kepco", data_schema=vol.Schema({
             vol.Required("username"): str,
-            vol.Required("password"): str,
+            vol.Required("password"): _PASSWORD_SELECTOR,
         }), errors=errors)
 
     async def async_step_reauth(self, entry_data) -> FlowResult:
@@ -550,7 +559,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=vol.Schema({vol.Required("password"): str}),
+            data_schema=vol.Schema({vol.Required("password"): _PASSWORD_SELECTOR}),
             description_placeholders={"username": username},
             errors=errors,
         )
@@ -590,7 +599,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                               "member_id": user_input["member_id"],
                               "contract_num": user_input["contract_num"]})
         return self.async_show_form(step_id="gasapp", data_schema=vol.Schema({
-            vol.Required("token"): str,
+            vol.Required("token"): _PASSWORD_SELECTOR,
             vol.Required("member_id"): str,
             vol.Required("contract_num"): str,
         }), errors=errors)
@@ -659,7 +668,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="pharmacy",
             data_schema=vol.Schema({
-                vol.Required("api_key"): str,
+                vol.Required("api_key"): _PASSWORD_SELECTOR,
                 vol.Required("q0", default="서울특별시"): vol.In(sido_opts),
             }),
             errors=errors,
@@ -721,8 +730,8 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_step_airkorea_select()
         sido_opts = [SelectOptionDict(value=k, label=k) for k in air_sido]
         return self.async_show_form(step_id="airkorea", data_schema=vol.Schema({
-            vol.Required("api_key"): str,
-            vol.Optional("living_api_key", default=""): str,
+            vol.Required("api_key"): _PASSWORD_SELECTOR,
+            vol.Optional("living_api_key", default=""): _PASSWORD_SELECTOR,
             vol.Required("sido", default="서울"): SelectSelector(
                 SelectSelectorConfig(options=sido_opts, mode=SelectSelectorMode.DROPDOWN)),
         }), errors=errors)
@@ -769,7 +778,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_kma_weather_sgg()
         sido_opts = [SelectOptionDict(value=k, label=k) for k in SIDO_LIST.keys()]
         return self.async_show_form(step_id="kma_weather", data_schema=vol.Schema({
-            vol.Required("api_key"): str,
+            vol.Required("api_key"): _PASSWORD_SELECTOR,
             vol.Required("sido_code"): SelectSelector(
                 SelectSelectorConfig(options=sido_opts,
                                      mode=SelectSelectorMode.DROPDOWN)),
@@ -818,7 +827,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                       "radius_km": user_input.get("radius_km", 200),
                       "min_magnitude": user_input.get("min_magnitude", 3.0)})
         return self.async_show_form(step_id="earthquake", data_schema=vol.Schema({
-            vol.Required("api_key"): str,
+            vol.Required("api_key"): _PASSWORD_SELECTOR,
             vol.Optional("latitude", default=37.5665): vol.Coerce(float),
             vol.Optional("longitude", default=126.978): vol.Coerce(float),
             vol.Optional("radius_km", default=200): vol.Coerce(int),
@@ -844,7 +853,7 @@ class KRPublicDataConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors["api_key" if err == "invalid_api_key" else "base"] = err
         return self.async_show_form(
             step_id="seoul_bus",
-            data_schema=vol.Schema({vol.Required("api_key"): str}),
+            data_schema=vol.Schema({vol.Required("api_key"): _PASSWORD_SELECTOR}),
             errors=errors,
         )
 
@@ -1114,10 +1123,14 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
 
         # Other entry types: classic schema-based flow.
         if user_input is not None:
-            new_data = {**self._entry.data, **user_input}
+            new_data = {**self._entry.data}
+            for key, value in user_input.items():
+                if key in _SECRET_FIELDS and not (isinstance(value, str) and value.strip()):
+                    continue
+                new_data[key] = value
             self.hass.config_entries.async_update_entry(
                 self._entry, data=new_data)
-            return self.async_create_entry(title="", data=user_input)
+            return self.async_create_entry(title="", data={})
 
         schema = self._build_schema(etype)
         if schema is None:
@@ -1282,7 +1295,7 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="seoul_bus_opt_edit_key",
             data_schema=vol.Schema({
-                vol.Required("api_key", default=self._new_api_key or ""): str,
+                vol.Required("api_key"): _PASSWORD_SELECTOR,
             }),
             errors=errors,
         )
@@ -1491,7 +1504,7 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
             from .weather import AREA_CODES
             area_options = [SelectOptionDict(value=c, label=n) for c, n in AREA_CODES.items()]
             return vol.Schema({
-                vol.Required("api_key", default=d.get("api_key", "")): str,
+                vol.Optional("api_key"): _PASSWORD_SELECTOR,
                 vol.Required("area_codes", default=d.get("area_codes", [])): SelectSelector(
                     SelectSelectorConfig(options=area_options, multiple=True,
                                          mode=SelectSelectorMode.DROPDOWN)),
@@ -1499,8 +1512,8 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
 
         elif etype == ENTRY_TRANSIT:
             return vol.Schema({
-                vol.Optional("seoul_api_key", default=d.get("seoul_api_key", "")): str,
-                vol.Optional("bus_api_key", default=d.get("bus_api_key", "")): str,
+                vol.Optional("seoul_api_key"): _PASSWORD_SELECTOR,
+                vol.Optional("bus_api_key"): _PASSWORD_SELECTOR,
             })
 
         elif etype == ENTRY_FUEL:
@@ -1510,7 +1523,7 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
             cur_sidos = list(set(c["sido_code"] for c in d.get("configs", [])))
             cur_fuels = list(set(c["fuel_code"] for c in d.get("configs", [])))
             return vol.Schema({
-                vol.Required("api_key", default=d.get("api_key", "")): str,
+                vol.Optional("api_key"): _PASSWORD_SELECTOR,
                 vol.Required("sido_codes", default=cur_sidos): SelectSelector(
                     SelectSelectorConfig(options=sido_opts, multiple=True,
                                          mode=SelectSelectorMode.DROPDOWN)),
@@ -1533,7 +1546,7 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
 
         elif etype == ENTRY_DISASTER:
             return vol.Schema({
-                vol.Required("api_key", default=d.get("api_key", "")): str,
+                vol.Optional("api_key"): _PASSWORD_SELECTOR,
             })
 
         elif etype == ENTRY_SAFETY_ALERT:
@@ -1559,12 +1572,12 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
         elif etype == ENTRY_KEPCO:
             return vol.Schema({
                 vol.Required("username", default=d.get("username", "")): str,
-                vol.Required("password", default=d.get("password", "")): str,
+                vol.Optional("password"): _PASSWORD_SELECTOR,
             })
 
         elif etype == ENTRY_GASAPP:
             return vol.Schema({
-                vol.Required("token", default=d.get("token", "")): str,
+                vol.Optional("token"): _PASSWORD_SELECTOR,
                 vol.Required("member_id", default=d.get("member_id", "")): str,
                 vol.Required("contract_num", default=d.get("contract_num", "")): str,
             })
@@ -1577,18 +1590,18 @@ class KRPublicDataOptionsFlow(config_entries.OptionsFlow):
 
         elif etype == ENTRY_AIRKOREA:
             return vol.Schema({
-                vol.Required("api_key", default=d.get("api_key", "")): str,
-                vol.Optional("living_api_key", default=d.get("living_api_key", "")): str,
+                vol.Optional("api_key"): _PASSWORD_SELECTOR,
+                vol.Optional("living_api_key"): _PASSWORD_SELECTOR,
             })
 
         elif etype == ENTRY_KMA_WEATHER:
             return vol.Schema({
-                vol.Required("api_key", default=d.get("api_key", "")): str,
+                vol.Optional("api_key"): _PASSWORD_SELECTOR,
             })
 
         elif etype == ENTRY_EARTHQUAKE:
             return vol.Schema({
-                vol.Required("api_key", default=d.get("api_key", "")): str,
+                vol.Optional("api_key"): _PASSWORD_SELECTOR,
                 vol.Optional("radius_km", default=d.get("radius_km", 200)): vol.Coerce(int),
                 vol.Optional("min_magnitude", default=d.get("min_magnitude", 3.0)): vol.Coerce(float),
             })
