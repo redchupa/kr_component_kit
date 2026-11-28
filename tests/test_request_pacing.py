@@ -113,3 +113,27 @@ class RequestPacingTests(IsolatedAsyncioTestCase):
         clear()
         delete.assert_called_once_with(hass, pacing.DOMAIN, "provider_wait_a.test")
         pacing.check_manual_refresh(url)
+
+    async def test_single_short_transport_blip_stays_out_of_repairs(self):
+        notify = self.enterContext(patch.object(pacing, "_notify_cooldown", Mock()))
+        url = "https://a.test/"
+        session = SimpleNamespace(request=AsyncMock(side_effect=[
+            TimeoutError, SimpleNamespace(status_code=200, headers={}), TimeoutError, TimeoutError,
+        ]))
+        with self.assertRaises(TimeoutError):
+            await pacing.paced_curl_request(session, "GET", url)
+        notify.assert_not_called()
+        # The pause still applies; a manual refresh explains it without a Repairs notice.
+        with self.assertRaises(pacing.HomeAssistantError):
+            pacing.check_manual_refresh(url)
+        self.clock.monotonic.return_value = 160
+        await pacing.paced_curl_request(session, "GET", url)
+        self.clock.monotonic.return_value = 168
+        with self.assertRaises(TimeoutError):
+            await pacing.paced_curl_request(session, "GET", url)
+        notify.assert_not_called()
+        # A second consecutive failure means the outage is lasting: tell the user.
+        self.clock.monotonic.return_value = 228
+        with self.assertRaises(TimeoutError):
+            await pacing.paced_curl_request(session, "GET", url)
+        notify.assert_called_once_with("a.test", 120)

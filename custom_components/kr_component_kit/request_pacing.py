@@ -28,7 +28,8 @@ class _Host:
 
     def record_failure(self, host, retry_after=None):
         self.failures = min(6, self.failures + 1)
-        delay = 60 * 2 ** (self.failures - 1)
+        base = 60 * 2 ** (self.failures - 1)
+        delay = base
         if retry_after:
             try:
                 if retry_after.strip().isascii() and retry_after.strip().isdigit():
@@ -38,9 +39,12 @@ class _Host:
                 delay = max(delay, seconds)
             except (TypeError, ValueError, OverflowError, OSError):
                 pass
+        # A lone base-length pause (e.g. one DNS blip) ends before anyone could
+        # act on a Repairs notice, so only repeated or server-extended pauses show one.
+        notify = self.failures > 1 or delay > base
         delay += random.uniform(0, 10)
         self.cooldown_until = time.monotonic() + delay
-        if _notify_cooldown is not None:
+        if notify and _notify_cooldown is not None:
             _notify_cooldown(host, delay)
 
     def check_response(self, host, status, headers):
