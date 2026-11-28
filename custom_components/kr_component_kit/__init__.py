@@ -297,11 +297,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async_register_airkorea_services(hass, api_key, living_key, sido)
 
     elif etype == ENTRY_KMA_WEATHER:
+        from zoneinfo import ZoneInfo
         from .kma_weather.coordinator import KMAWeatherCoordinator
         api_key = entry.data["api_key"]
         regions = entry.data.get("regions", [])
+        # Building a ZoneInfo reads tzdata from disk: resolve it once, off the loop.
+        tz = await hass.async_add_executor_job(ZoneInfo, "Asia/Seoul")
         c = KMAWeatherCoordinator(
-            hass, api_key, regions,
+            hass, api_key, regions, tz,
             air_api_key=api_key,
             air_station=entry.data.get("air_station", ""),
             living_api_key=api_key,

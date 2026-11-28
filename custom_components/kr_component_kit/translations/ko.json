@@ -135,6 +135,13 @@
           "password": "비밀번호"
         }
       },
+      "reauth_confirm": {
+        "title": "한전 다시 로그인",
+        "description": "저장된 {username} 계정으로 한전 로그인에 실패했습니다. 이 계정의 현재 비밀번호를 입력하세요.",
+        "data": {
+          "password": "비밀번호"
+        }
+      },
       "gasapp": {
         "title": "가스앱 설정",
         "data": {
@@ -285,7 +292,8 @@
     },
     "abort": {
       "already_configured": "이미 설정되어 있습니다.",
-      "no_options": "수정 가능한 옵션이 없습니다."
+      "no_options": "수정 가능한 옵션이 없습니다.",
+      "reauth_successful": "다시 로그인했습니다. 한전 항목을 다시 불러왔습니다."
     }
   },
   "options": {

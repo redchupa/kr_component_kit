@@ -141,6 +141,13 @@
           "password": "Password"
         }
       },
+      "reauth_confirm": {
+        "title": "Sign in to KEPCO again",
+        "description": "KEPCO rejected the saved login for {username}. Enter the current password for this account.",
+        "data": {
+          "password": "Password"
+        }
+      },
       "gasapp": {
         "title": "GasApp",
         "data": {
@@ -285,7 +292,8 @@
     },
     "abort": {
       "already_configured": "Already configured.",
-      "no_options": "No options to configure."
+      "no_options": "No options to configure.",
+      "reauth_successful": "Re-authentication succeeded. The KEPCO entry has been reloaded."
     }
   },
   "options": {

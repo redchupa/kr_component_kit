@@ -1,7 +1,7 @@
 """KMA Weather coordinator - fetches forecast + O3 + UV in sync."""
 from __future__ import annotations
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 import aiohttp
 from homeassistant.core import HomeAssistant
@@ -13,11 +13,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class KMAWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    def __init__(self, hass, api_key, regions,
+    def __init__(self, hass, api_key, regions, tz,
                  air_api_key="", air_station="",
                  living_api_key="", area_no=""):
         super().__init__(hass, _LOGGER, name="kma_weather",
                          update_interval=timedelta(seconds=KMA_SCAN_INTERVAL))
+        self._tz = tz  # resolved in the executor during entry setup
         self._api_key = api_key
         self._regions = regions
         self._air_key = air_api_key or api_key
@@ -58,9 +59,7 @@ class KMAWeatherCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     from ..airkorea.api import fetch_uv_index
                     uv = await fetch_uv_index(session, self._living_key, self._area_no)
                     if uv:
-                        from datetime import datetime
-                        from zoneinfo import ZoneInfo
-                        now = datetime.now(ZoneInfo("Asia/Seoul"))
+                        now = datetime.now(self._tz)
                         h = (now.hour // 3) * 3
                         for field in [f"h{h}", "h0"]:
                             val = uv.get(field)

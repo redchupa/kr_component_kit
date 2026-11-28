@@ -16,5 +16,5 @@
     "beautifulsoup4>=4.13.0",
     "xmltodict>=0.13.0"
   ],
-  "version": "4.9.13"
+  "version": "4.9.14"
 }

@@ -141,6 +141,13 @@
           "password": "パスワード"
         }
       },
+      "reauth_confirm": {
+        "title": "KEPCO に再ログイン",
+        "description": "保存されている {username} のログイン情報が KEPCO で拒否されました。このアカウントの現在のパスワードを入力してください。",
+        "data": {
+          "password": "パスワード"
+        }
+      },
       "gasapp": {
         "title": "ガスアプリ設定",
         "data": {
@@ -285,7 +292,8 @@
     },
     "abort": {
       "already_configured": "既に設定されています。",
-      "no_options": "設定可能なオプションがありません。"
+      "no_options": "設定可能なオプションがありません。",
+      "reauth_successful": "再認証に成功しました。KEPCO のエントリーを再読み込みしました。"
     }
   },
   "options": {
